@@ -1,0 +1,21 @@
+[DEFAULT]
+#No defaults
+[paths]
+unknownFiles = C:\Users\Don\Documents\Sunnyside\WebsiteManagement\unknown-files.txt
+#note that this config file is assumed to reside in the cwd or its parent at startup
+workingDirectory = C:\Users\Don|Documents\Sunnyside\WebsiteManagement\
+usageDirectory = C:\Users\Don\Documents\Sunnyside\WebsiteManagement\UsageGraphs\
+picsInUse = C:\Users\Don\Documents\Sunnyside\WebsiteManagement\pics-in-use.txt
+
+
+[database]
+dbName = bitnami_wordpress
+dbUser = root
+
+#These currently only affect the page hits by day and week data - not category page hits
+[measurement period]
+startDate = 2016/11/1
+endDate = 2018/12/31
+
+
+###### Note that this file can be in Source Management,  Real one should not be.
