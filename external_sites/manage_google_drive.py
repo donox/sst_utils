@@ -3,23 +3,15 @@ import shutil
 import os
 import pandas as pd
 
-
-# cmd_rclone = 'rclone -v copyto {} sst_store:/RClone/{}'
-# cmd_save_sst_files = "rclone -v copy {} 'sst_store:/Sunnyside Times/SST Admin/{}'"
-# cmd_get_sst_files = "rclone -v copy 'sst_store:/Sunnyside Times/SST Admin/{}' {}"
-
 # RClone config file in /home/don/.config/rclone/rclone.conf
 
 
 class ManageGoogleDrive(object):
     def __init__(self):
-        self.cmd_list_files = "rclone ls 'sst_store:/Sunnyside Times/SSTAdmin/'"
-        self.cmd_download_csv_file = "rclone -v --drive-formats csv copy \'sst_store:/\'{} {}"
-        self.cmd_download_dir = "rclone copy \'sst_store:/{}\' {}"
-        self.auto_update = 'Membership Lists/'
-        self.minutes = 'Minutes/'
-        self.docs_to_update = 'Updated Docs/'
-        self.possible_directories = {'auto': self.auto_update, 'minutes': self.minutes, 'other': self.docs_to_update}
+        self.cmd_list_files = "rclone ls 'sst_store:{}'"
+        self.cmd_download_csv_file = "rclone -v --drive-formats csv copy 'sst_store:/'{} {}"
+        self.cmd_download_file_or_directory = "rclone -v copy 'sst_store:/{}' {}"
+        self.cmd_upload_file_or_directory = "rclone -v copy {} 'sst_store:/{}'"
 
     def download_csv_file(self, logger, file, download_dir, dummy_source=None):
         '''Download Google Spreadsheet as csv file.'''
@@ -37,14 +29,27 @@ class ManageGoogleDrive(object):
         """Download contents of specified directory to local directory.
         """
         try:
-            download_files_cmd = self.cmd_download_dir.format(dir_to_download, target_dir)
+            download_files_cmd = self.cmd_download_file_or_directory.format(dir_to_download, target_dir)
             run_shell_command(download_files_cmd, logger)
         except Exception as e:
             logger.make_error_entry('Error downloading file directory {}'.format(dir_to_download))
             raise e
 
-    def download_file(self, logger, file):
-        pass
+    def download_file(self, logger, source_dir, file_to_download, target_dir):
+        try:
+            download_files_cmd = self.cmd_download_file_or_directory.format(source_dir + file_to_download, target_dir)
+            run_shell_command(download_files_cmd, logger)
+        except Exception as e:
+            logger.make_error_entry('Error downloading file  {}'.format(file_to_download))
+            raise e
+
+    def upload_file(self, logger, source_dir, file_to_upload, target_dir):
+        try:
+            upload_files_cmd = self.cmd_upload_file_or_directory.format(source_dir + file_to_upload, target_dir)
+            run_shell_command(upload_files_cmd, logger)
+        except Exception as e:
+            logger.make_error_entry('Error downloading file  {}'.format(file_to_upload))
+            raise e
 
 
 def copytree(src, dst, symlinks=False, ignore=None):

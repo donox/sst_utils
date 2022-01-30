@@ -13,6 +13,7 @@ from new_content.process_new_content_folder import ProcessNewContentFolder as pn
 from utilities.run_log_command import run_shell_command, OvernightLogger
 
 from external_sites.manage_google_drive import ManageGoogleDrive
+from manage_users.create_resident_list import CreateResidentList
 
 
 # RClone config file in /home/don/.config/rclone/rclone.conf
@@ -38,15 +39,15 @@ def driver():
     if do_testing:
         prototyping = False
         process_images = False  # Generate web pages to be uploaded to server                #     Use of 'local_' is as a sub-command under process_images
-        load_content_files = True
-        build_user_list = False
+        load_content_files = False
+        build_user_list = True
         # drive_content_dir = "SSTManagement/NewContent"
         drive_content_dir = "SSTmanagement/NewContentTest"
     else:
         prototyping = False
         process_images = False
         load_content_files = False
-        build_user_list = False
+        build_user_list = True
         drive_content_dir = "SSTManagement/NewContent"
 
     config = configparser.ConfigParser()
@@ -74,7 +75,10 @@ def driver():
     cmd_list_directory = 'rclone ls "sst_store:/{}"'
 
     summary_logger = OvernightLogger('summary_log', logs_directory)  # Logger - see use below
-    summary_logger.make_info_entry('Start Nightly Run')
+    if do_testing:
+        summary_logger.make_info_entry('Start Testing Run')
+    else:
+        summary_logger.make_info_entry('Start Nightly Run')
 
     if load_content_files:
         # Copy source files from google drive (SSTmanagement/NewContent) to
@@ -131,28 +135,16 @@ def driver():
             sst_logger = OvernightLogger('build_user_list', logs_directory)
             sst_logger.make_info_entry('Start User Login Creation')
 
-            manage_drive = ManageGoogleDrive()
-
+            resident_phone_list = "Sunnyside Resident Phone Directory. 01-2022.xls"
+            google_drive_dir = "SSTmanagement/UserData/"
             temps = temp_directory + 'user_list_temp/'
             if os.path.exists(temps):  # Anything from prior runs is gone
                 shutil.rmtree(temps)
             os.mkdir(temps)
 
-            try:
-                manage_drive.download_directory(sst_logger, 'SSTmanagement/UserData', temps)
-                for _, _, filenames in os.walk(temps):
-                    for file in filenames:
-                        if file.endswith('xls'):
-                            ofile = file[0:-3] + 'csv'
-                        elif file.endswith('xlsx'):
-                            ofile = file[0:-4] + 'csv'
-                        ff = temps + file
-                        read_file = pd.read_excel(ff)
-                        ff = temps + ofile
-                        read_file.to_csv(ff, index=None, header=False)
-            except Exception as e:
-                print(e)
-                traceback.print_exc()
+            res_list_processor = CreateResidentList(sst_logger, temps, google_drive_dir)
+            resident_list = res_list_processor.process_resident_directory(resident_phone_list)
+
 
             # Log completion
             sst_logger.make_info_entry('Complete User Login Creation')
@@ -162,6 +154,7 @@ def driver():
             summary_logger.make_error_entry('build_user_list failed with exception: {}'.format(e.args))
 
     if process_images:
+        # THIS MAY NOT BE NEEDED AS IMAGES ARE HANDLED WHEN LOADING OTHER CONTENT FILES
         target_directory = work_directory + 'auto_update'  # auto_update is temporary working dir - emptied at use
         try:
             process_images_log = OvernightLogger('process_images', logs_directory)
