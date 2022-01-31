@@ -13,7 +13,7 @@ from new_content.process_new_content_folder import ProcessNewContentFolder as pn
 from utilities.run_log_command import run_shell_command, OvernightLogger
 
 from external_sites.manage_google_drive import ManageGoogleDrive
-from manage_users.create_resident_list import CreateResidentList
+from manage_users.create_resident_list import CreateUserList
 
 
 # RClone config file in /home/don/.config/rclone/rclone.conf
@@ -26,39 +26,38 @@ def driver():
         sst_user = os.environ['USER']
     except:
         raise SystemError("No TargetHost Environment Variable specified")
+
     # This script is intended to run daily, so there is a notion of 'testing' which is applicable
     # during development or other non-automated execution.  Automated execution requires creating
     # a Linux timer driven script.
     do_testing = True
     # Assume that any run between 1am and 4am is for production
     start_notest = dt.time(1, 0)  # but not if between 1am and 4am
-    end_notest = dt.time(4, 0)
+    end_notest = dt.time(3, 0)
     if start_notest < dt.datetime.now().time() < end_notest:
         do_testing = False
 
     if do_testing:
         prototyping = False
-        process_images = False  # Generate web pages to be uploaded to server                #     Use of 'local_' is as a sub-command under process_images
+        process_images = False  # Probably not needed process
         load_content_files = False
-        build_user_list = True
-        # drive_content_dir = "SSTManagement/NewContent"
-        drive_content_dir = "SSTmanagement/NewContentTest"
+        build_user_list = False
+        build_staff_list = True
+        drive_content_dir = "SSTManagement/NewContent"
+        # drive_content_dir = "SSTmanagement/NewContentTest"
     else:
         prototyping = False
         process_images = False
         load_content_files = False
-        build_user_list = True
+        build_user_list = False
+        build_staff_list = False
         drive_content_dir = "SSTManagement/NewContent"
 
     config = configparser.ConfigParser()
 
+    # Load parameters from configuration file
     with open("./config_file.cfg") as source:
         config.read(source.name)
-    # Load parameters from configuration file
-
-    # dbname = config['database']['dbName']
-    # dbuser = config['database']['dbUser']
-
     work_directory = config[sst_user]['workingDirectory']
     os.curdir = work_directory  # Set current working directory
     logs_directory = config[sst_user]['logsDirectory']
@@ -67,12 +66,6 @@ def driver():
     image_directory = config[sst_user]['imageDirectory']
     gallery_directory = config[sst_user]['galleryDirectory']
     sst_directory = config[sst_user]['SSTDirectory']
-
-    # Linix commands needed to access Google Drive
-    # cmd_rclone = 'rclone -v copyto {} sst_store:/RClone/{}'
-    # cmd_save_sst_files = "rclone -v copyto {} 'sst_store:/Sunnyside Times/SST Admin/{}'"
-    # cmd_get_sst_files = "rclone -v copy 'sst_store:/Sunnyside Times/SST Admin/{}' {}"
-    cmd_list_directory = 'rclone ls "sst_store:/{}"'
 
     summary_logger = OvernightLogger('summary_log', logs_directory)  # Logger - see use below
     if do_testing:
@@ -127,24 +120,26 @@ def driver():
         except Exception as e:
             summary_logger.make_error_entry('load_content_files failed with exception: {}'.format(e.args))
 
-    if build_user_list:
-        # Copy xslx (or other source) files from google drive (SSTmanagement/UserData) to
-        # a temporary directory.  Parse and convert the files to build user login asset
-        try:  # Trap error in this function so others don't get aborted
-            # First set up a logger for this capability
+    if build_user_list or build_staff_list:
+        # Copy Sunnyside Resident Phone Directory from google drive (SSTmanagement/UserData) to
+        # a temporary directory.  Parse and convert the file to build user login csv file for residents
+        try:
             sst_logger = OvernightLogger('build_user_list', logs_directory)
             sst_logger.make_info_entry('Start User Login Creation')
 
             resident_phone_list = "Sunnyside Resident Phone Directory. 01-2022.xls"
+            staff_phone_list = "Sunnyside Staff Directory. 01-2022.xls"
             google_drive_dir = "SSTmanagement/UserData/"
             temps = temp_directory + 'user_list_temp/'
             if os.path.exists(temps):  # Anything from prior runs is gone
                 shutil.rmtree(temps)
             os.mkdir(temps)
 
-            res_list_processor = CreateResidentList(sst_logger, temps, google_drive_dir)
-            resident_list = res_list_processor.process_resident_directory(resident_phone_list)
-
+            res_list_processor = CreateUserList(sst_logger, temps, google_drive_dir)
+            if build_user_list:
+                res_list_processor.process_resident_directory(resident_phone_list)
+            if build_staff_list:
+                res_list_processor.process_staff_directory(staff_phone_list)
 
             # Log completion
             sst_logger.make_info_entry('Complete User Login Creation')
@@ -175,8 +170,8 @@ def driver():
         target_directory = work_directory + 'worktemp/'
         try:
             outfile = work_directory + "tmp.txt"
-            cmd = cmd_list_directory.format('Sunnyside Times')
-            run_shell_command(cmd, logger, outfile=outfile)
+            # cmd = cmd_list_directory.format('Sunnyside Times')
+            # run_shell_command(cmd, logger, outfile=outfile)
 
         except Exception as e:
             print(e)

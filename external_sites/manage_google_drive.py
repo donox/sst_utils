@@ -11,7 +11,7 @@ class ManageGoogleDrive(object):
         self.cmd_list_files = "rclone ls 'sst_store:{}'"
         self.cmd_download_csv_file = "rclone -v --drive-formats csv copy 'sst_store:/'{} {}"
         self.cmd_download_file_or_directory = "rclone -v copy 'sst_store:/{}' {}"
-        self.cmd_upload_file_or_directory = "rclone -v copy {} 'sst_store:/{}'"
+        self.cmd_upload_file_or_directory = "rclone -v copy '{}' 'sst_store:/'{}"
 
     def download_csv_file(self, logger, file, download_dir, dummy_source=None):
         '''Download Google Spreadsheet as csv file.'''
@@ -43,7 +43,7 @@ class ManageGoogleDrive(object):
             logger.make_error_entry('Error downloading file  {}'.format(file_to_download))
             raise e
 
-    def upload_file(self, logger, source_dir, file_to_upload, target_dir):
+    def upload_file(self, logger, target_dir, file_to_upload, source_dir):
         try:
             upload_files_cmd = self.cmd_upload_file_or_directory.format(source_dir + file_to_upload, target_dir)
             run_shell_command(upload_files_cmd, logger)
