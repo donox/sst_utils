@@ -75,3 +75,15 @@ class CreateUserList(object):
         except:
             raise ValueError(f"Failure downloading {dir_file}")
 
+    def get_all_users(self, filenames, outfile_name):
+        try:
+            self.drive.download_directory(self.logger, self.google_drive_dir, self.temp_dir)
+        except:
+            raise ValueError(f"Failure downloading {self.google_drive_dir}")
+
+        with open(self.temp_dir + outfile_name, 'w') as outfile:
+            for fname in filenames:
+                with open(self.temp_dir + fname) as infile:
+                    outfile.write(infile.read())
+
+

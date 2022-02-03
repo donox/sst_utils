@@ -42,7 +42,8 @@ def driver():
         process_images = False  # Probably not needed process
         load_content_files = False
         build_user_list = False
-        build_staff_list = True
+        build_staff_list = False
+        create_combined_login = True
         drive_content_dir = "SSTManagement/NewContent"
         # drive_content_dir = "SSTmanagement/NewContentTest"
     else:
@@ -51,6 +52,7 @@ def driver():
         load_content_files = False
         build_user_list = False
         build_staff_list = False
+        create_combined_login = False
         drive_content_dir = "SSTManagement/NewContent"
 
     config = configparser.ConfigParser()
@@ -66,6 +68,7 @@ def driver():
     image_directory = config[sst_user]['imageDirectory']
     gallery_directory = config[sst_user]['galleryDirectory']
     sst_directory = config[sst_user]['SSTDirectory']
+    sst_support_directory = config[sst_user]['supportDirectory']
 
     summary_logger = OvernightLogger('summary_log', logs_directory)  # Logger - see use below
     if do_testing:
@@ -147,6 +150,34 @@ def driver():
             summary_logger.make_info_entry('build_user_list completed normally')
         except Exception as e:
             summary_logger.make_error_entry('build_user_list failed with exception: {}'.format(e.args))
+
+    if create_combined_login:
+        # Copy current login lists from Google Drive, combine them and move to sst/support/users.csv
+        try:
+            sst_logger = OvernightLogger('build_users_csv', logs_directory)
+            sst_logger.make_info_entry('Start User Login Creation')
+
+            resident_phone_list = "Sunnyside Resident Phone Directory. 01-2022.xls"
+            staff_phone_list = "Sunnyside Staff Directory. 01-2022.xls"
+            google_drive_dir = "SSTmanagement/UserData/"
+            temps = temp_directory + 'user_list_temp/'
+            if os.path.exists(temps):  # Anything from prior runs is gone
+                shutil.rmtree(temps)
+            os.mkdir(temps)
+
+            files = ['residents.csv', 'staff.csv']
+            outfile = 'users.csv'
+            res_list_processor = CreateUserList(sst_logger, temps, google_drive_dir)
+            res_list_processor.get_all_users(files, outfile)
+
+            shutil.copy(temps + 'users.csv', sst_support_directory + 'users.csv')
+
+            # Log completion
+            sst_logger.make_info_entry('Complete Creation of sst/support/users.csv')
+            sst_logger.close_logger()
+            summary_logger.make_info_entry('build_users_csv completed normally')
+        except Exception as e:
+            summary_logger.make_error_entry('build_users_csv failed with exception: {}'.format(e.args))
 
     if process_images:
         # THIS MAY NOT BE NEEDED AS IMAGES ARE HANDLED WHEN LOADING OTHER CONTENT FILES

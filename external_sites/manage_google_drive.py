@@ -43,6 +43,14 @@ class ManageGoogleDrive(object):
             logger.make_error_entry('Error downloading file  {}'.format(file_to_download))
             raise e
 
+    def download_directory(self, logger, source_dir, target_dir):
+        try:
+            download_directory_cmd = self.cmd_download_file_or_directory.format(source_dir, target_dir)
+            run_shell_command(download_directory_cmd, logger)
+        except Exception as e:
+            logger.make_error_entry('Error downloading file  {}'.format(source_dir))
+            raise e
+
     def upload_file(self, logger, target_dir, file_to_upload, source_dir):
         try:
             upload_files_cmd = self.cmd_upload_file_or_directory.format(source_dir + file_to_upload, target_dir)
