@@ -43,6 +43,7 @@ def driver():
         load_content_files = False
         build_user_list = False
         build_staff_list = False
+        build_horizon_list = False
         create_combined_login = True
         drive_content_dir = "SSTManagement/NewContent"
         # drive_content_dir = "SSTmanagement/NewContentTest"
@@ -52,6 +53,7 @@ def driver():
         load_content_files = False
         build_user_list = False
         build_staff_list = False
+        build_horizon_list = False
         create_combined_login = False
         drive_content_dir = "SSTManagement/NewContent"
 
@@ -123,7 +125,7 @@ def driver():
         except Exception as e:
             summary_logger.make_error_entry('load_content_files failed with exception: {}'.format(e.args))
 
-    if build_user_list or build_staff_list:
+    if build_user_list or build_staff_list or build_horizon_list:
         # Copy Sunnyside Resident Phone Directory from google drive (SSTmanagement/UserData) to
         # a temporary directory.  Parse and convert the file to build user login csv file for residents
         try:
@@ -132,6 +134,7 @@ def driver():
 
             resident_phone_list = "Sunnyside Resident Phone Directory. 01-2022.xls"
             staff_phone_list = "Sunnyside Staff Directory. 01-2022.xls"
+            horizon_club_list = "Horizon_club.xls"
             google_drive_dir = "SSTmanagement/UserData/"
             temps = temp_directory + 'user_list_temp/'
             if os.path.exists(temps):  # Anything from prior runs is gone
@@ -143,6 +146,8 @@ def driver():
                 res_list_processor.process_resident_directory(resident_phone_list)
             if build_staff_list:
                 res_list_processor.process_staff_directory(staff_phone_list)
+            if build_horizon_list:
+                res_list_processor.process_horizon_directory(horizon_club_list)
 
             # Log completion
             sst_logger.make_info_entry('Complete User Login Creation')
@@ -165,7 +170,7 @@ def driver():
                 shutil.rmtree(temps)
             os.mkdir(temps)
 
-            files = ['residents.csv', 'staff.csv']
+            files = ['residents.csv', 'staff.csv', 'horizon.csv']
             outfile = 'users.csv'
             res_list_processor = CreateUserList(sst_logger, temps, google_drive_dir)
             res_list_processor.get_all_users(files, outfile)
