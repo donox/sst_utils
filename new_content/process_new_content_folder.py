@@ -5,8 +5,9 @@ import yaml
 
 
 class ProcessNewContentFolder(object):
-    def __init__(self, folder_path, galleries, files, temp_directory, docx_directory, sst_directory,
+    def __init__(self, logger, folder_path, galleries, files, temp_directory, docx_directory, sst_directory,
                  image_directory, gallery_directory):
+        self.logger = logger
         self.folder_path = folder_path
         self.galleries = galleries
         self.filenames = files
@@ -30,6 +31,7 @@ class ProcessNewContentFolder(object):
                         story_meta[ky] = story_meta_tmp[key]
                     stream.close()
                 except yaml.YAMLError as exc:
+                    self.logger.make_error_entry(f"YAML error encountered in {self.folder_path} with error {exc.args}")
                     raise exc
         else:
             has_meta = False
@@ -47,7 +49,7 @@ class ProcessNewContentFolder(object):
 
         for file in self.filenames:
             file_parts = file.split(".")
-            ext = file_parts[-1]
+            ext = file_parts[-1].lower()
             if ext == 'docx':
                 if not has_meta:
                     raise ValueError(f"Folder: {self.folder_path} has no file meta.txt")
@@ -65,6 +67,7 @@ class ProcessNewContentFolder(object):
                 shutil.copy(source, target)
             elif ext == 'jpg':
                 if not has_photos:
+                    self.logger.make_error_entry(f"Photo {file} found in folder  without having a photos.txt")
                     raise ValueError("Photos without photos.txt")
                 try:
                     image_path = self.sst_directory + path_dict[file][1:]
@@ -74,14 +77,17 @@ class ProcessNewContentFolder(object):
                         os.remove(image_path)
                     shutil.copy(source, image_path)
                 except:
+                    self.logger.make_error_entry("No path in photos.txt for photo: {file}")
                     raise ValueError(f"No path in photos.txt for photo: {file}")
 
             elif ext == 'txt':
                 if file == 'meta.txt' or file == 'photos.txt':
                     pass
                 else:
+                    self.logger.make_error_entry(f"Unrecognized text file {file} in {self.folder_path}")
                     raise ValueError(f"Unrecognized text file {file} in {self.folder_path}")
             else:
+                self.logger.make_error_entry(f"Unrecognized file type {ext} in {self.folder_path}")
                 raise ValueError(f"Unrecognized file type {ext} in {self.folder_path}")
         for dirname in self.galleries:
             # A directory represents a gallery and cannot be nested.
@@ -95,6 +101,7 @@ class ProcessNewContentFolder(object):
                     # Note: yaml is small and we convert to list so it can be reused
                     gallery_meta = [x for x in yaml.safe_load_all(stream)]
                 except yaml.YAMLError as exc:
+                    self.logger.make_error_entry(f"YAML error encountered in {path_to_gallery} with error {exc.args}")
                     raise exc
                 # First - locate gallery path and gallery name
                 gallery_path = None
@@ -113,10 +120,11 @@ class ProcessNewContentFolder(object):
                     if doc:
                         shutil.copy(path_to_gallery + '/' + doc['name'], gal_path + doc['name'])
         else:
+            self.logger.make_error_entry(f"No metadata.yml file in {path_to_gallery}")
             raise ValueError(f"No metadata.yml file in {path_to_gallery}")
 
 def create_empty_dirpath(path):
-    '''Create an empty directory and make any intermediate directories.'''
+    """Create an empty directory and make any intermediate directories."""
     if os.path.exists(path):
         if not os.path.isdir(path):
             raise ValueError(f"Specified path, {path}, is not a directory in call to create_empty_dirpath.")

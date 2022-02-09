@@ -14,6 +14,7 @@ from utilities.run_log_command import run_shell_command, OvernightLogger
 
 from external_sites.manage_google_drive import ManageGoogleDrive
 from manage_users.create_resident_list import CreateUserList
+from utilities.send_email import ManageEmail
 
 
 # RClone config file in /home/don/.config/rclone/rclone.conf
@@ -38,13 +39,13 @@ def driver():
         do_testing = False
 
     if do_testing:
-        prototyping = False
+        prototyping = True
         process_images = False  # Probably not needed process
         load_content_files = False
         build_user_list = False
         build_staff_list = False
         build_horizon_list = False
-        create_combined_login = True
+        create_combined_login = False
         drive_content_dir = "SSTManagement/NewContent"
         # drive_content_dir = "SSTmanagement/NewContentTest"
     else:
@@ -110,10 +111,12 @@ def driver():
                             dirnames.append(x)
                         else:
                             filenames.append(x)
-
-                    process_folder = pncf(dirpath, dirnames, filenames, temp_directory, docx_directory,
-                                          sst_directory, image_directory, gallery_directory)
-                    result = process_folder.process_content()
+                    try:
+                        process_folder = pncf(sst_logger, dirpath, dirnames, filenames, temp_directory,
+                                              docx_directory, sst_directory, image_directory, gallery_directory)
+                        result = process_folder.process_content()
+                    except Exception as e:
+                        sst_logger.make_error_entry(f"Folder {dirpath} has an error: {e.args}")
             except Exception as e:
                 print(e)
                 traceback.print_exc()
@@ -208,6 +211,9 @@ def driver():
             outfile = work_directory + "tmp.txt"
             # cmd = cmd_list_directory.format('Sunnyside Times')
             # run_shell_command(cmd, logger, outfile=outfile)
+
+            mgr = ManageEmail()
+            mgr.test_email()
 
         except Exception as e:
             print(e)
