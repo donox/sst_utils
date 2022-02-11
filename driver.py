@@ -14,6 +14,7 @@ from utilities.run_log_command import run_shell_command, OvernightLogger
 
 from external_sites.manage_google_drive import ManageGoogleDrive
 from manage_users.create_resident_list import CreateUserList
+from utilities.send_email import ManageEmail
 
 
 # RClone config file in /home/don/.config/rclone/rclone.conf
@@ -38,22 +39,30 @@ def driver():
         do_testing = False
 
     if do_testing:
-        prototyping = False
+        prototyping = True
         process_images = False  # Probably not needed process
         load_content_files = False
         build_user_list = False
         build_staff_list = False
-        create_combined_login = True
+        build_horizon_list = False
+        create_combined_login = False
         drive_content_dir = "SSTManagement/NewContent"
         # drive_content_dir = "SSTmanagement/NewContentTest"
+        stories_to_process = "all"              # To process specific directories, list them below
+        # stories_to_process = ["dir 1", "dir 2"]
+
+
     else:
         prototyping = False
         process_images = False
         load_content_files = False
         build_user_list = False
         build_staff_list = False
+        build_horizon_list = False
         create_combined_login = False
         drive_content_dir = "SSTManagement/NewContent"
+        stories_to_process = "all"  # To process specific directories, list them below
+        # stories_to_process = ["dir 1", "dir 2"]
 
     config = configparser.ConfigParser()
 
@@ -69,6 +78,14 @@ def driver():
     gallery_directory = config[sst_user]['galleryDirectory']
     sst_directory = config[sst_user]['SSTDirectory']
     sst_support_directory = config[sst_user]['supportDirectory']
+    smtp_server = config['email']['smtpServer']
+    smtp_port = config['email']['smtpPort']
+
+    config_private = configparser.ConfigParser()
+    with open("./config_private.cfg") as source:
+        config_private.read(source.name)
+    email_username = config_private['email']['username']
+    email_password = config_private['email']['password']
 
     summary_logger = OvernightLogger('summary_log', logs_directory)  # Logger - see use below
     if do_testing:
@@ -98,20 +115,29 @@ def driver():
             try:
                 # pull everything from Google Drive to local temp directory
                 manage_drive.download_directory(sst_logger, drive_content_dir, temps)
-                for story_dir in os.listdir(temps):
+                if stories_to_process == "all":
+                    stories = os.listdir(temps)
+                else:
+                    stories = stories_to_process
+                for story_dir in stories:
                     dirpath = temps + story_dir
-                    content = os.listdir(dirpath)
-                    dirnames = []
-                    filenames = []
-                    for x in content:
-                        if os.path.isdir(dirpath + '/' + x):
-                            dirnames.append(x)
-                        else:
-                            filenames.append(x)
-
-                    process_folder = pncf(dirpath, dirnames, filenames, temp_directory, docx_directory,
-                                          sst_directory, image_directory, gallery_directory)
-                    result = process_folder.process_content()
+                    if os.path.isdir(dirpath):
+                        content = os.listdir(dirpath)
+                        dirnames = []
+                        filenames = []
+                        for x in content:
+                            if os.path.isdir(dirpath + '/' + x):
+                                dirnames.append(x)
+                            else:
+                                filenames.append(x)
+                        try:
+                            process_folder = pncf(sst_logger, dirpath, dirnames, filenames, temp_directory,
+                                                  docx_directory, sst_directory, image_directory, gallery_directory)
+                            result = process_folder.process_content()
+                        except Exception as e:
+                            sst_logger.make_error_entry(f"Folder {dirpath} has an error: {e.args}")
+                    else:
+                        sst_logger.make_error_entry(f"Folder {dirpath} from story list {stories} not found.")
             except Exception as e:
                 print(e)
                 traceback.print_exc()
@@ -123,7 +149,7 @@ def driver():
         except Exception as e:
             summary_logger.make_error_entry('load_content_files failed with exception: {}'.format(e.args))
 
-    if build_user_list or build_staff_list:
+    if build_user_list or build_staff_list or build_horizon_list:
         # Copy Sunnyside Resident Phone Directory from google drive (SSTmanagement/UserData) to
         # a temporary directory.  Parse and convert the file to build user login csv file for residents
         try:
@@ -132,6 +158,7 @@ def driver():
 
             resident_phone_list = "Sunnyside Resident Phone Directory. 01-2022.xls"
             staff_phone_list = "Sunnyside Staff Directory. 01-2022.xls"
+            horizon_club_list = "Horizon_club.xls"
             google_drive_dir = "SSTmanagement/UserData/"
             temps = temp_directory + 'user_list_temp/'
             if os.path.exists(temps):  # Anything from prior runs is gone
@@ -143,6 +170,8 @@ def driver():
                 res_list_processor.process_resident_directory(resident_phone_list)
             if build_staff_list:
                 res_list_processor.process_staff_directory(staff_phone_list)
+            if build_horizon_list:
+                res_list_processor.process_horizon_directory(horizon_club_list)
 
             # Log completion
             sst_logger.make_info_entry('Complete User Login Creation')
@@ -165,7 +194,7 @@ def driver():
                 shutil.rmtree(temps)
             os.mkdir(temps)
 
-            files = ['residents.csv', 'staff.csv']
+            files = ['residents.csv', 'staff.csv', 'horizon.csv']
             outfile = 'users.csv'
             res_list_processor = CreateUserList(sst_logger, temps, google_drive_dir)
             res_list_processor.get_all_users(files, outfile)
@@ -203,6 +232,14 @@ def driver():
             outfile = work_directory + "tmp.txt"
             # cmd = cmd_list_directory.format('Sunnyside Times')
             # run_shell_command(cmd, logger, outfile=outfile)
+
+            mgr = ManageEmail(email_username, email_password, smtp_server, smtp_port)
+            mgr.add_recipient("don@theoxleys.com")
+            mgr.add_recipient("donoxley@gmail.com")
+            mgr.set_subject("Log result of running test")
+            mgr.add_attachment(logs_directory + "summary_log.log")
+            mgr.set_body("THis is the body")
+            mgr.send_email()
 
         except Exception as e:
             print(e)

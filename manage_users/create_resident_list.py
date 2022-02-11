@@ -75,6 +75,25 @@ class CreateUserList(object):
         except:
             raise ValueError(f"Failure downloading {dir_file}")
 
+    def process_horizon_directory(self, dir_file):
+        try:
+            self.drive.download_file(self.logger, self.google_drive_dir, dir_file, self.temp_dir)
+        except:
+            raise ValueError(f"Failure downloading {dir_file}")
+
+        try:
+            res_date = pd.read_excel(self.temp_dir + dir_file, header=2)
+            res_date.drop(res_date.columns[[0, 1, 4, 5, 6]], axis=1, inplace=True)
+            res_date.dropna(inplace=True)
+            res_date.to_csv(self.temp_dir + "horizon.csv", header=False, index=False)
+        except:
+            raise ValueError(f"Failure reading Horizon Club phone list")
+
+        try:
+            self.drive.upload_file(self.logger, self.google_drive_dir, "horizon.csv", self.temp_dir)
+        except:
+            raise ValueError(f"Failure downloading {dir_file}")
+
     def get_all_users(self, filenames, outfile_name):
         try:
             self.drive.download_directory(self.logger, self.google_drive_dir, self.temp_dir)
