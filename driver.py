@@ -79,6 +79,12 @@ def driver():
     sst_directory = config[sst_user]['SSTDirectory']
     sst_support_directory = config[sst_user]['supportDirectory']
 
+    config_private = configparser.ConfigParser()
+    with open("./config_private.cfg") as source:
+        config_private.read(source.name)
+    email_username = config_private['email']['username']
+    email_password = config_private['email']['password']
+
     summary_logger = OvernightLogger('summary_log', logs_directory)  # Logger - see use below
     if do_testing:
         summary_logger.make_info_entry('Start Testing Run')
@@ -225,7 +231,7 @@ def driver():
             # cmd = cmd_list_directory.format('Sunnyside Times')
             # run_shell_command(cmd, logger, outfile=outfile)
 
-            mgr = ManageEmail()
+            mgr = ManageEmail(email_username, email_password)
             mgr.add_recipient("don@theoxleys.com")
             mgr.add_recipient("donoxley@gmail.com")
             mgr.set_subject("Log result of running test")
