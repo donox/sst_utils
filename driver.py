@@ -48,6 +48,10 @@ def driver():
         create_combined_login = False
         drive_content_dir = "SSTManagement/NewContent"
         # drive_content_dir = "SSTmanagement/NewContentTest"
+        stories_to_process = "all"              # To process specific directories, list them below
+        # stories_to_process = ["dir 1", "dir 2"]
+
+
     else:
         prototyping = False
         process_images = False
@@ -57,6 +61,8 @@ def driver():
         build_horizon_list = False
         create_combined_login = False
         drive_content_dir = "SSTManagement/NewContent"
+        stories_to_process = "all"  # To process specific directories, list them below
+        # stories_to_process = ["dir 1", "dir 2"]
 
     config = configparser.ConfigParser()
 
@@ -101,22 +107,29 @@ def driver():
             try:
                 # pull everything from Google Drive to local temp directory
                 manage_drive.download_directory(sst_logger, drive_content_dir, temps)
-                for story_dir in os.listdir(temps):
+                if stories_to_process == "all":
+                    stories = os.listdir(temps)
+                else:
+                    stories = stories_to_process
+                for story_dir in stories:
                     dirpath = temps + story_dir
-                    content = os.listdir(dirpath)
-                    dirnames = []
-                    filenames = []
-                    for x in content:
-                        if os.path.isdir(dirpath + '/' + x):
-                            dirnames.append(x)
-                        else:
-                            filenames.append(x)
-                    try:
-                        process_folder = pncf(sst_logger, dirpath, dirnames, filenames, temp_directory,
-                                              docx_directory, sst_directory, image_directory, gallery_directory)
-                        result = process_folder.process_content()
-                    except Exception as e:
-                        sst_logger.make_error_entry(f"Folder {dirpath} has an error: {e.args}")
+                    if os.path.isdir(dirpath):
+                        content = os.listdir(dirpath)
+                        dirnames = []
+                        filenames = []
+                        for x in content:
+                            if os.path.isdir(dirpath + '/' + x):
+                                dirnames.append(x)
+                            else:
+                                filenames.append(x)
+                        try:
+                            process_folder = pncf(sst_logger, dirpath, dirnames, filenames, temp_directory,
+                                                  docx_directory, sst_directory, image_directory, gallery_directory)
+                            result = process_folder.process_content()
+                        except Exception as e:
+                            sst_logger.make_error_entry(f"Folder {dirpath} has an error: {e.args}")
+                    else:
+                        sst_logger.make_error_entry(f"Folder {dirpath} from story list {stories} not found.")
             except Exception as e:
                 print(e)
                 traceback.print_exc()
@@ -213,7 +226,12 @@ def driver():
             # run_shell_command(cmd, logger, outfile=outfile)
 
             mgr = ManageEmail()
-            mgr.test_email()
+            mgr.add_recipient("don@theoxleys.com")
+            mgr.add_recipient("donoxley@gmail.com")
+            mgr.set_subject("Log result of running test")
+            mgr.add_attachment(logs_directory + "summary_log.log")
+            mgr.set_body("THis is the body")
+            mgr.send_email()
 
         except Exception as e:
             print(e)
