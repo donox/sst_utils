@@ -5,9 +5,9 @@ from email.message import EmailMessage
 
 
 class ManageEmail(object):
-    def __init__(self, sender, password):
-        self.smtp_server = "smtp.ionos.com"
-        self.port = 587  # For starttls
+    def __init__(self, sender, password, smtp_server, smtp_port):
+        self.smtp_server = smtp_server
+        self.port = smtp_port
         self.sender_email = sender
         self.password = password
         self.recipients = []

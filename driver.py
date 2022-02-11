@@ -78,6 +78,8 @@ def driver():
     gallery_directory = config[sst_user]['galleryDirectory']
     sst_directory = config[sst_user]['SSTDirectory']
     sst_support_directory = config[sst_user]['supportDirectory']
+    smtp_server = config['email']['smtpServer']
+    smtp_port = config['email']['smtpPort']
 
     config_private = configparser.ConfigParser()
     with open("./config_private.cfg") as source:
@@ -231,7 +233,7 @@ def driver():
             # cmd = cmd_list_directory.format('Sunnyside Times')
             # run_shell_command(cmd, logger, outfile=outfile)
 
-            mgr = ManageEmail(email_username, email_password)
+            mgr = ManageEmail(email_username, email_password, smtp_server, smtp_port)
             mgr.add_recipient("don@theoxleys.com")
             mgr.add_recipient("donoxley@gmail.com")
             mgr.set_subject("Log result of running test")
