@@ -6,15 +6,18 @@ import datetime as dt
 import os
 import shutil
 import traceback
-import pandas as pd
-from pathlib import Path
+import yaml as YAML
+import pathlib as pl
 from xml.etree import ElementTree as ET
 from new_content.process_new_content_folder import ProcessNewContentFolder as pncf
 from utilities.run_log_command import run_shell_command, OvernightLogger
 
-from external_sites.manage_google_drive import ManageGoogleDrive
+from system_control.manage_google_drive import ManageGoogleDrive
 from manage_users.create_resident_list import CreateUserList
 from utilities.send_email import ManageEmail
+from system_control import command_processor as cmd_proc
+import config_private as private
+import tempfile as tf
 
 
 # RClone config file in /home/don/.config/rclone/rclone.conf
@@ -46,7 +49,8 @@ def driver():
         build_staff_list = False
         build_horizon_list = False
         create_combined_login = False
-        drive_content_dir = "SSTManagement/NewContent"
+        drive_content_dir = "SSTmanagement/NewContentDev"
+        # drive_content_dir = "SSTmanagement/NewContent"
         # drive_content_dir = "SSTmanagement/NewContentTest"
         stories_to_process = "all"              # To process specific directories, list them below
         # stories_to_process = ["dir 1", "dir 2"]
@@ -60,7 +64,7 @@ def driver():
         build_staff_list = False
         build_horizon_list = False
         create_combined_login = False
-        drive_content_dir = "SSTManagement/NewContent"
+        drive_content_dir = "SSTmanagement/NewContent"
         stories_to_process = "all"  # To process specific directories, list them below
         # stories_to_process = ["dir 1", "dir 2"]
 
@@ -80,12 +84,8 @@ def driver():
     sst_support_directory = config[sst_user]['supportDirectory']
     smtp_server = config['email']['smtpServer']
     smtp_port = config['email']['smtpPort']
-
-    config_private = configparser.ConfigParser()
-    with open("./config_private.cfg") as source:
-        config_private.read(source.name)
-    email_username = config_private['email']['username']
-    email_password = config_private['email']['password']
+    email_username = private.username
+    email_password = private.password
 
     summary_logger = OvernightLogger('summary_log', logs_directory)  # Logger - see use below
     if do_testing:
@@ -107,20 +107,34 @@ def driver():
 
             manage_drive = ManageGoogleDrive()
 
-            temps = temp_directory + 'docx_temp/'
-            if os.path.exists(temps):  # Anything from prior runs is gone
-                shutil.rmtree(temps)
-            os.mkdir(temps)
+            temps = tf.TemporaryDirectory(prefix='docx', dir=temp_directory)
+
+            # First, pick up configuration yaml file
+            filename = 'config_users.yaml'
+            try:
+                manage_drive.download_file(sst_logger, "SSTmanagement/", filename, temps.name)
+                with open(pl.Path(temps.name) / filename, 'r', encoding='utf-8') as fd:
+                    res = YAML.safe_load_all(fd)
+                    docs = [doc for doc in res]
+                    fd.close()
+                users = [x["name"] for x in docs if x]
+                user_data = dict()
+                for n, user in enumerate(users):
+                    if user:
+                        user_data[user] = docs[n+1]
+            except Exception as e:
+                print(e)
+                traceback.print_exc()
 
             try:
                 # pull everything from Google Drive to local temp directory
-                manage_drive.download_directory(sst_logger, drive_content_dir, temps)
+                manage_drive.download_directory(sst_logger, drive_content_dir, temps.name)
                 if stories_to_process == "all":
-                    stories = os.listdir(temps)
+                    stories = os.listdir(temps.name)
                 else:
                     stories = stories_to_process
                 for story_dir in stories:
-                    dirpath = temps + story_dir
+                    dirpath = temps.name
                     if os.path.isdir(dirpath):
                         content = os.listdir(dirpath)
                         dirnames = []
@@ -229,17 +243,22 @@ def driver():
         drive_dir_to_download = config['drive paths']['driveAdmin'] + config['drive paths']['driveMinutes']
         target_directory = work_directory + 'worktemp/'
         try:
-            outfile = work_directory + "tmp.txt"
-            # cmd = cmd_list_directory.format('Sunnyside Times')
-            # run_shell_command(cmd, logger, outfile=outfile)
+            # mgr = ManageEmail(email_username, email_password, smtp_server, smtp_port)
+            # mgr.add_recipient("don@theoxleys.com")
+            # mgr.add_recipient("donoxley@gmail.com")
+            # mgr.set_subject("Log result of running test")
+            # mgr.add_attachment(logs_directory + "summary_log.log")
+            # mgr.set_body("THis is the body")
+            # mgr.send_email()
 
-            mgr = ManageEmail(email_username, email_password, smtp_server, smtp_port)
-            mgr.add_recipient("don@theoxleys.com")
-            mgr.add_recipient("donoxley@gmail.com")
-            mgr.set_subject("Log result of running test")
-            mgr.add_attachment(logs_directory + "summary_log.log")
-            mgr.set_body("THis is the body")
-            mgr.send_email()
+            # cmds = cmd_proc.SystemUser(temp_directory, logger)
+            # print(cmds.users)
+
+            dirs = cmd_proc.ManageFolders(temp_directory, logger)
+            dirs.process_commands_top()
+            # dirs.process_commands("SSTmanagement/NewContentDev/", "content", ["identity", "single"])
+
+            foo = 3
 
         except Exception as e:
             print(e)

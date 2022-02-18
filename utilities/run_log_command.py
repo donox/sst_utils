@@ -31,7 +31,7 @@ class OvernightLogger(object):
         self.logger = None
 
 
-def run_shell_command(command_line, logger, outfile=False):
+def run_shell_command(command_line, logger, outfile=False, result_as_string=False):
     command_line_args = shlex.split(command_line)
     cmd = command_line_args[0]
 
@@ -58,7 +58,8 @@ def run_shell_command(command_line, logger, outfile=False):
     else:
         # no exception was raised
         logger.make_info_entry('Subprocess {} completed'.format(cmd))
-
+        if result_as_string:
+            return process_output
     return True
 
 
