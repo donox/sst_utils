@@ -1,34 +1,34 @@
-import sys
-import os
-import shutil
-import traceback
-import yaml as YAML
-from system_control import manage_google_drive as MGD
-import tempfile as tf
 import pathlib as pl
-from new_content.process_story_content import ProcessStoryContent as psc
-import system_control.config_control as cc
+import tempfile as tf
+import traceback
+
+import yaml as YAML
+
+from new_content.process_story_content import ProcessStoryContent as PSC
+from system_control import manage_google_drive as mgd
 
 
 class SystemUser(object):
     """Provide support for permitted users of the system."""
 
-    def __init__(self, temp_dir, logger):
+    def __init__(self, temp_dir, logger, config):
         self.temp_dir = temp_dir
+        self.config = config
         self.logger = logger
         self.user_data = self._load_config_users()  # dictionary (key=name) with name, emailAddress, mailLogs, isAdmin
         self.users = list(self.user_data.keys())  # list of names of users
 
     def _load_config_users(self):
-        manage_drive = MGD.ManageGoogleDrive()
+        manage_drive = mgd.ManageGoogleDrive()
 
         temps = tf.TemporaryDirectory(prefix='user', dir=self.temp_dir)
 
         # First, pick up configuration yaml file
-        filename = 'config_users.yaml'
+        user_config = 'config_users.yaml'
         try:
-            manage_drive.download_file(self.logger, "SSTmanagement/", filename, temps.name)
-            with open(pl.Path(temps.name) / filename, 'r', encoding='utf-8') as fd:
+            top_level = self.config.get_configuration_parameter("driveSSTManagement", group="drive paths")
+            manage_drive.download_file(self.logger, top_level, user_config, temps.name)
+            with open(pl.Path(temps.name) / user_config, 'r', encoding='utf-8') as fd:
                 res = YAML.safe_load_all(fd)
                 docs = [doc for doc in res]
                 fd.close()
@@ -41,6 +41,9 @@ class SystemUser(object):
         except Exception as e:
             print(e)
             traceback.print_exc()
+
+    def get_users(self):
+        return self.user_data
 
     def get_persons(self, name_string):
         """Split comma separated list of users and set default to admins."""
@@ -59,17 +62,14 @@ class SystemUser(object):
 class ManageFolders(object):
     """Manage top level directories on SSTManagement"""
 
-    def __init__(self, config, logger):
+    def __init__(self, config, logger, users):
         self.config = config
         self.logger = logger
         self.temp_dir = config.get_configuration_parameter('tempDirectory')
-        self.users = SystemUser(self.temp_dir, logger)
-        self.manage_drive = MGD.ManageGoogleDrive()
+        self.users = users
+        self.manage_drive = mgd.ManageGoogleDrive()
         self.top_folder = config.get_configuration_parameter("driveSSTManagement", group="drive paths")
         self.current_folder = self.top_folder
-        # self.folders = self.get_folders(self.top_folder)
-        # self.files = self.get_files(self.top_folder)
-        # self.commands = self.get_commands(self.top_folder)
         self.valid_command_sets = ["top", "content", "story"]
         self.valid_commands = \
             {"top": ["identity", "process_single_folder"],
@@ -208,17 +208,11 @@ class ManageFolders(object):
 
         If person(s) specified - must be known to system, else default to sys admin.
         If send_log specified as True - create future to send log to specified person."""
-        print(f"Command: {command} called")
         if "person" in command:
             persons = self.users.get_persons(command['person'])
         self._context_add(command, users=persons)
 
-    def _command_process_folder(self, command):
-        print(f"Command: {command} called")
-        # Remove
-
     def _command_all(self, command):
-        print(f"Command: {command} called")
         content = self.manage_drive.directory_list_directories(self.logger, self.current_folder)
         for item in content:
             self._command_single_folder(command, folder=item, folder_type="story")
@@ -226,7 +220,6 @@ class ManageFolders(object):
     def _command_single_folder(self, command, folder=None, folder_type=None):
         # Keyword args are to allow the 'All' command to use this code and provide otherwise missing values.
         try:
-            print(f"Command: {command} called")
             if not folder:
                 folder = self._get_command_attribute("folder", command)
             if not folder_type:
@@ -249,14 +242,13 @@ class ManageFolders(object):
             self.current_folder = current_folder
 
     def _command_process_story(self, command):
-        print(f"Command: {command} called")
         docx_directory = self.config.get_configuration_parameter('docxDirectory')
         sst_directory = self.config.get_configuration_parameter('SSTDirectory')
         image_directory = self.config.get_configuration_parameter('imageDirectory')
         gallery_directory = self.config.get_configuration_parameter('galleryDirectory')
-        process_folder = psc(self.logger, self.current_folder, self.temp_dir,
+        process_folder = PSC(self.logger, self.current_folder, self.temp_dir,
                              docx_directory, sst_directory, image_directory, gallery_directory)
-        result = process_folder.process_content()
+        process_folder.process_content()
 
     def _command_xxx(self, command):
         print(f"Command: {command} called")

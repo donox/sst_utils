@@ -1,18 +1,8 @@
-import sys
 import os
-import shutil
-import traceback
-import yaml as YAML
-from system_control import manage_google_drive as MGD
-from system_control import config_control as conf
-import tempfile as tf
-import pathlib as pl
-from new_content.process_story_content import ProcessStoryContent as psc
-import system_control.config_control as cc
-from utilities.run_log_command import run_shell_command, OvernightLogger
+
 from system_control import command_processor as cmd_proc
-import tempfile as tf
-from utilities.send_email import ManageEmail
+from system_control import config_control as conf
+from utilities.run_log_command import OvernightLogger
 
 
 class SystemManager(object):
@@ -28,9 +18,11 @@ class SystemManager(object):
 
         self.config = conf.ConfigurationManager()
         self.logs_directory = self.config.get_configuration_parameter('logsDirectory')
+        self.temp_dir = self.config.get_configuration_parameter('tempDirectory')
         self.logger = OvernightLogger('SSTcontent', self.logs_directory)
+        self.system_users = cmd_proc.SystemUser(self.temp_dir, self.logger, self.config)
 
     def run_command_processor(self):
-        dirs = cmd_proc.ManageFolders(self.config, self.logger)
+        dirs = cmd_proc.ManageFolders(self.config, self.logger, self.system_users)
         dirs.process_commands_top()
 

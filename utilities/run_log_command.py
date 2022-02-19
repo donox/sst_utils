@@ -8,7 +8,7 @@ class OvernightLogger(object):
         self.logger = logging.getLogger(log_name)
         self.logger.setLevel(logging.INFO)
         # create file handler which logs even debug messages
-        fh = logging.FileHandler(log_directory + log_name + '.log')
+        fh = logging.FileHandler(log_directory + log_name + '.log', mode='w')
         fh.setLevel(logging.INFO)
         # create console handler with a higher log level
         ch = logging.StreamHandler()
@@ -49,8 +49,8 @@ def run_shell_command(command_line, logger, outfile=False, result_as_string=Fals
             with open(outfile, 'wb') as fl:
                 fl.write(process_output)
 
-        logger.make_info_entry(process_output)
-        logger.make_info_entry(process_error)
+        # logger.make_info_entry(process_output)
+        # logger.make_info_entry(process_error)
     except (OSError, subprocess.CalledProcessError) as exception:
         logger.make_error_entry('Exception occurred in {}: {}'.format(cmd, exception))
         logger.make_error_entry('Subprocess {} failed'.format(cmd))
