@@ -2,25 +2,33 @@ import sys
 import os
 import shutil
 import yaml
+from system_control.manage_google_drive import ManageGoogleDrive as mgd
+import tempfile as tf
+import pathlib as pl
 
 
-class ProcessNewContentFolder(object):
-    def __init__(self, logger, folder_path, galleries, files, temp_directory, docx_directory, sst_directory,
+class ProcessStoryContent(object):
+    def __init__(self, logger, folder_path, temp_directory, docx_directory, sst_directory,
                  image_directory, gallery_directory):
         self.logger = logger
-        self.folder_path = folder_path
-        self.galleries = galleries
-        self.filenames = files
+        self.drive = mgd()
+        self.folder_path = mgd.add_slash(folder_path)
+        self.galleries = self.drive.directory_list_directories(self.logger, self.folder_path)
+        self.filenames = self.drive.directory_list_files(self.logger, self.folder_path)
         self.temp_directory = temp_directory
+        self.story_directory = tf.TemporaryDirectory(prefix='story', dir=temp_directory)
         self.docx_directory = docx_directory
         self.sst_directory = sst_directory
         self.image_directory = image_directory
         self.gallery_directory = gallery_directory
+        # Note, downloading to max-depth=2 downloads contents of any galleries.
+        self.drive.download_directory(self.logger, self.folder_path, mgd.add_slash(self.story_directory.name), max_depth=2)
+        foo = 3
 
     def process_content(self):
         if "meta.txt" in self.filenames:
             has_meta = True
-            with open(self.folder_path + '/meta.txt') as stream:
+            with open(pl.Path(self.story_directory.name) / 'meta.txt') as stream:
                 try:
                     story_meta_tmp = yaml.safe_load(stream)
                     story_meta = dict()
@@ -37,7 +45,7 @@ class ProcessNewContentFolder(object):
             has_meta = False
         if "photos.txt" in self.filenames:
             has_photos = True
-            with open(self.folder_path + '/photos.txt') as stream:
+            with open(pl.Path(self.story_directory.name) / 'photos.txt') as stream:
                 path_dict = dict()
                 for path in stream.readlines():
                     if path.endswith('\n'):
@@ -54,13 +62,13 @@ class ProcessNewContentFolder(object):
                 if not has_meta:
                     raise ValueError(f"Folder: {self.folder_path} has no file meta.txt")
                 # copy docx file ensuring file corresponds to slug
-                source = self.folder_path + '/' + file
+                source = pl.Path(self.story_directory.name) / file
                 target = self.docx_directory + story_meta['slug'] + ".docx"
                 if os.path.exists(target):
                     os.remove(target)
                 shutil.copy(source, target)
                 # Copy meta file with proper renaming
-                source = self.folder_path + '/meta.txt'
+                source = pl.Path(self.story_directory.name) / 'meta.txt'
                 target = self.docx_directory + story_meta['slug'] + ".meta"
                 if os.path.exists(target):
                     os.remove(target)
@@ -72,7 +80,7 @@ class ProcessNewContentFolder(object):
                 try:
                     image_path = self.sst_directory + path_dict[file][1:]
                     os.makedirs(os.path.dirname(image_path), exist_ok=True)
-                    source = self.folder_path + '/' + file
+                    source = pl.Path(self.story_directory.name) / file
                     if os.path.exists(image_path):
                         os.remove(image_path)
                     shutil.copy(source, image_path)
@@ -81,7 +89,7 @@ class ProcessNewContentFolder(object):
                     raise ValueError(f"No path in photos.txt for photo: {file}")
 
             elif ext == 'txt':
-                if file == 'meta.txt' or file == 'photos.txt':
+                if file == 'meta.txt' or file == 'photos.txt' or 'commands.txt':
                     pass
                 else:
                     self.logger.make_error_entry(f"Unrecognized text file {file} in {self.folder_path}")
@@ -91,12 +99,13 @@ class ProcessNewContentFolder(object):
                 raise ValueError(f"Unrecognized file type {ext} in {self.folder_path}")
         for dirname in self.galleries:
             # A directory represents a gallery and cannot be nested.
-            self.process_gallery(self.folder_path + '/' + dirname)
+            self.process_gallery(pl.Path(self.story_directory.name) / dirname)
 
     def process_gallery(self, path_to_gallery):
         photo_files = os.listdir(path_to_gallery)
+        resolved_gallery_path = pl.Path(path_to_gallery)
         if 'metadata.yml' in photo_files:
-            with open(path_to_gallery + '/metadata.yml') as stream:
+            with open(resolved_gallery_path / 'metadata.yml') as stream:
                 try:
                     # Note: yaml is small and we convert to list so it can be reused
                     gallery_meta = [x for x in yaml.safe_load_all(stream)]
@@ -115,10 +124,10 @@ class ProcessNewContentFolder(object):
                     raise (f"Missing gallery path in {gallery_path}")
                 gal_path = self.sst_directory + gallery_path[1:]
                 create_empty_dirpath(gal_path)                              # THIS IS ONLY OCCURRENCE - make linux tempdir
-                shutil.copy(path_to_gallery + '/metadata.yml', gal_path)
+                shutil.copy(resolved_gallery_path / 'metadata.yml', gal_path)
                 for doc in gallery_meta:
                     if doc:
-                        shutil.copy(path_to_gallery + '/' + doc['name'], gal_path + doc['name'])
+                        shutil.copy(resolved_gallery_path / doc['name'], gal_path + doc['name'])
         else:
             self.logger.make_error_entry(f"No metadata.yml file in {path_to_gallery}")
             raise ValueError(f"No metadata.yml file in {path_to_gallery}")
