@@ -3,7 +3,7 @@ import shutil
 import os
 import csv
 import pandas as pd
-from external_sites.manage_google_drive import ManageGoogleDrive
+from system_control.manage_google_drive import ManageGoogleDrive
 import xlrd
 
 

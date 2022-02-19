@@ -59,31 +59,30 @@ class SystemUser(object):
 class ManageFolders(object):
     """Manage top level directories on SSTManagement"""
 
-    def __init__(self, temp_dir, logger):
+    def __init__(self, config, logger):
+        self.config = config
         self.logger = logger
-        self.temp_dir = temp_dir
-        self.users = SystemUser(temp_dir, logger)
-        self.config = cc.ConfigurationManager(['config_file.cfg', 'config_private.cfg'])
+        self.temp_dir = config.get_configuration_parameter('tempDirectory')
+        self.users = SystemUser(self.temp_dir, logger)
         self.manage_drive = MGD.ManageGoogleDrive()
-        self.top_folder = "SSTmanagement"
+        self.top_folder = config.get_configuration_parameter("driveSSTManagement", group="drive paths")
         self.current_folder = self.top_folder
         # self.folders = self.get_folders(self.top_folder)
         # self.files = self.get_files(self.top_folder)
         # self.commands = self.get_commands(self.top_folder)
         self.valid_command_sets = ["top", "content", "story"]
         self.valid_commands = \
-            {"top": ["identity", "process_folder"],
-             "content": ["identity", "single", "all", "process_folder"],
+            {"top": ["identity", "process_single_folder"],
+             "content": ["identity", "process_single_folder", "all"],
              "story": ["identity", "story"]
              }
         self.command_definitions = \
             {("top", "identity"): self._command_identity,
-             ("top", "process_folder"): self._command_process_folder,
+             ("top", "process_single_folder"): self._command_single_folder,
              ("content", "identity"): self._command_identity,
-             ("content", "single"): self._command_single,
-             ("content", "process_folder"): self._command_process_folder,
+             ("content", "process_single_folder"): self._command_single_folder,
              ("content", "all"): self._command_all,
-             ("story", "process_folder"): self._command_process_folder,
+             ("content", "process_single_folder"): self._command_single_folder,
              ("story", "identity"): self._command_identity,
              ("story", "story"): self._command_process_story,
              }
@@ -216,38 +215,38 @@ class ManageFolders(object):
 
     def _command_process_folder(self, command):
         print(f"Command: {command} called")
-        folder = self._get_command_attribute("folder", command)
-        folder_type = self._get_command_attribute("folder_type", command)
-        current_folder = self.current_folder
-        self.current_folder += '/' + folder
-        if folder_type == "site_content":  # may contain multiple folders of website content
-            self.process_commands(self.current_folder, 'content')
-        elif folder_type == "story":  # content for a single story (or part of one)
-            self.process_commands(self.current_folder, 'story')
-        else:
-            self.logger.make_error_entry(f"Unrecognized folder_type: {folder_type} for folder: {folder}")
-            self.current_folder = current_folder
-            raise ValueError(f"Invalid folder_type: {folder_type}")
-        self.current_folder = current_folder
+        # Remove
 
     def _command_all(self, command):
         print(f"Command: {command} called")
-        pass
+        content = self.manage_drive.directory_list_directories(self.logger, self.current_folder)
+        for item in content:
+            self._command_single_folder(command, folder=item, folder_type="story")
 
-    def _command_single(self, command):
-        print(f"Command: {command} called")
-        folder = self._get_command_attribute("folder", command)
-        folder_type = self._get_command_attribute("folder_type", command)
-        current_folder = self.current_folder
-        self.current_folder += '/' + folder
-        if folder_type == "story":  # content for a single story (or part of one)
-            self.process_commands(self.current_folder, 'story')
-        else:
-            self.logger.make_error_entry(f"Unrecognized folder_type: {folder_type} for folder: {folder}")
+    def _command_single_folder(self, command, folder=None, folder_type=None):
+        # Keyword args are to allow the 'All' command to use this code and provide otherwise missing values.
+        try:
+            print(f"Command: {command} called")
+            if not folder:
+                folder = self._get_command_attribute("folder", command)
+            if not folder_type:
+                folder_type = self._get_command_attribute("folder_type", command)
+            current_folder = self.current_folder
+            self.current_folder += '/' + folder
+            if folder_type == "site_content":  # may contain multiple folders of website content
+                self.process_commands(self.current_folder, 'content')
+            elif folder_type == "story":  # content for a single story (or part of one)
+                self.process_commands(self.current_folder, 'story')
+            else:
+                self.logger.make_error_entry(f"Unrecognized folder_type: {folder_type} for folder: {folder}")
+                self.current_folder = current_folder
+                raise ValueError(f"Invalid folder_type: {folder_type}")
             self.current_folder = current_folder
-            raise ValueError(f"Invalid folder_type: {folder_type}")
-        self.current_folder = current_folder
-        pass
+            pass
+        except Exception as e:
+            raise e
+        finally:
+            self.current_folder = current_folder
 
     def _command_process_story(self, command):
         print(f"Command: {command} called")

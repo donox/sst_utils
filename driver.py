@@ -18,6 +18,7 @@ from utilities.send_email import ManageEmail
 from system_control import command_processor as cmd_proc
 import config_private as private
 import tempfile as tf
+from system_control import system_manager as sm
 
 
 # RClone config file in /home/don/.config/rclone/rclone.conf
@@ -42,7 +43,8 @@ def driver():
         do_testing = False
 
     if do_testing:
-        prototyping = True
+        prototyping = False
+        sst_management = True
         process_images = False  # Probably not needed process
         load_content_files = False
         build_user_list = False
@@ -58,6 +60,7 @@ def driver():
 
     else:
         prototyping = False
+        sst_management = False
         process_images = False
         load_content_files = False
         build_user_list = False
@@ -92,6 +95,10 @@ def driver():
         summary_logger.make_info_entry('Start Testing Run')
     else:
         summary_logger.make_info_entry('Start Nightly Run')
+
+    if sst_management:
+        sys_mgr = sm.SystemManager()
+        sys_mgr.run_command_processor()
 
     if load_content_files:
         # Copy source files from google drive (SSTmanagement/NewContent) to

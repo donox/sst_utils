@@ -10,19 +10,25 @@ try:
 except Exception as e:
     raise SystemError(f"No TargetHost Environment Variable specified: {e.args}")
 
-class ConfigurationManager(object):
-    def __init__(self, config_files):
-        # config_files is a list of filenames relative to the current working directory
-        self.config_files = config_files
-        self.config = configparser.ConfigParser()
-        for file in self.config_files:
-            with open("./config_file.cfg") as source:
-                self.config.read(source.name)
 
-    def get_configuration_parameter(self, parm):
+class ConfigurationManager(object):
+    def __init__(self):
+        # config_files is a list of filenames relative to the current working directory
+        self.config_file = "./config_file.cfg"
+        self.config = configparser.ConfigParser()
+        with open(self.config_file) as source:
+            self.config.read(source.name)
+        # Add values from private configuration to global config
+        self.config['private'] = {}
+        private_config = self.config['private']
+        private_config['username'] = private.username
+        private_config['password'] = private.password
+
+
+    def get_configuration_parameter(self, parm, group=sst_user):
         res = None
         try:
-            res = self.config[sst_user][parm]
+            res = self.config[group][parm]
         except KeyError:
             return res
         return res
@@ -38,6 +44,6 @@ class ConfigurationManager(object):
         # sst_support_directory = config[sst_user]['supportDirectory']
         # smtp_server = config['email']['smtpServer']
         # smtp_port = config['email']['smtpPort']
-        # email_username = private.username
-        # email_password = private.password
+        # email_username = config['private']['username']
+        # email_password = config['private']['password']
 

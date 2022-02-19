@@ -23,7 +23,7 @@ class ProcessStoryContent(object):
         self.gallery_directory = gallery_directory
         # Note, downloading to max-depth=2 downloads contents of any galleries.
         self.drive.download_directory(self.logger, self.folder_path, mgd.add_slash(self.story_directory.name), max_depth=2)
-
+        foo = 3
 
     def process_content(self):
         if "meta.txt" in self.filenames:
