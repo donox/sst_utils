@@ -154,6 +154,16 @@ class ManageFolders(object):
             cmd = self.command_definitions[key]
             cmd(command)
 
+    def get_log_requests(self):
+        """Find users in context wanting a copy of the log."""
+        res = []
+        for item in self.context:
+            if 'person' in item:
+                if 'send_log' in item:
+                    if item['send_log']:
+                        res.append(item['person'])
+        return res
+
     def _context_add(self, cmd, **kwargs):
         self.context.append(cmd)  # TRYING TO ADD KWARG Users
 
