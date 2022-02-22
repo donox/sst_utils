@@ -9,7 +9,6 @@ import traceback
 import yaml as YAML
 import pathlib as pl
 from xml.etree import ElementTree as ET
-from new_content.process_new_content_folder import ProcessNewContentFolder as pncf
 from utilities.run_log_command import run_shell_command, OvernightLogger
 
 from system_control.manage_google_drive import ManageGoogleDrive
