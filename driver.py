@@ -19,6 +19,7 @@ from system_control import command_processor as cmd_proc
 import config_private as private
 import tempfile as tf
 from system_control import system_manager as sm
+import yaml
 
 
 # RClone config file in /home/don/.config/rclone/rclone.conf
@@ -30,7 +31,7 @@ def driver():
         # Values = 'don', 'sam', (add others as needed)
         sst_user = os.environ['USER']
     except:
-        raise SystemError("No TargetHost Environment Variable specified")
+        raise SystemError("No USER Environment Variable specified")
 
     # This script is intended to run daily, so there is a notion of 'testing' which is applicable
     # during development or other non-automated execution.  Automated execution requires creating
@@ -55,12 +56,11 @@ def driver():
         # drive_content_dir = "SSTmanagement/NewContent"
         # drive_content_dir = "SSTmanagement/NewContentTest"
         stories_to_process = "all"              # To process specific directories, list them below
-        # stories_to_process = ["dir 1", "dir 2"]
 
 
     else:
         prototyping = False
-        sst_management = False
+        sst_management = True
         process_images = False
         load_content_files = False
         build_user_list = False
@@ -261,10 +261,14 @@ def driver():
             # cmds = cmd_proc.SystemUser(temp_directory, logger)
             # print(cmds.users)
 
-            dirs = cmd_proc.ManageFolders(temp_directory, logger)
-            dirs.process_commands_top()
+            # dirs = cmd_proc.ManageFolders(temp_directory, logger)
+            # dirs.process_commands_top()
             # dirs.process_commands("SSTmanagement/NewContentDev/", "content", ["identity", "single"])
-
+            file_path = '/home/don/Documents/Temp/Sunnybear_New_Year.txt'
+            with open(file_path) as stream:
+                story_content = yaml.safe_load_all(stream)
+                for line in story_content:
+                    print(line)
             foo = 3
 
         except Exception as e:

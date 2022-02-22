@@ -62,11 +62,12 @@ class SystemUser(object):
 class ManageFolders(object):
     """Manage top level directories on SSTManagement"""
 
-    def __init__(self, config, logger, users):
+    def __init__(self, config, logger, users, command_prefix):
         self.config = config
         self.logger = logger
         self.temp_dir = config.get_configuration_parameter('tempDirectory')
         self.users = users
+        self.command_prefix = command_prefix    # Prefix to append to top level commands.txt to allow multiple users
         self.manage_drive = mgd.ManageGoogleDrive()
         self.top_folder = config.get_configuration_parameter("driveSSTManagement", group="drive paths")
         self.current_folder = self.top_folder
@@ -113,10 +114,12 @@ class ManageFolders(object):
                 files.append(elements[-1])
         return files
 
-    def get_commands(self, folder):
+    def get_commands(self, folder, command_set):
         """Load commands.txt as yaml list of documents (dictionaries)."""
         try:
             filename = "commands.txt"
+            if command_set == "top":
+                filename = self.command_prefix + filename
             temp_dir = tf.TemporaryDirectory(dir=self.temp_dir, prefix='cmd')
             self.manage_drive.download_file(self.logger, folder, filename, temp_dir.name)
             with open(pl.Path(temp_dir.name) / filename, 'r', encoding='utf-8') as fd:
@@ -127,8 +130,8 @@ class ManageFolders(object):
                     docs.pop()
             return docs
         except Exception as e:
-            print(e)
-            traceback.print_exc()
+            self.logger.make_error_entry(f"Error retreiving commands.txt in folder {folder} with error: {e.args}")
+            raise e
 
     def process_commands_top(self):
         context = []  # state of work already done - each element is a dictionary
@@ -176,7 +179,7 @@ class ManageFolders(object):
     def _get_command_set(self, command_set, folder):
         """Retrieve command set for a folder as a list
         """
-        cmds = self.get_commands(folder)
+        cmds = self.get_commands(folder, command_set)
         if not cmds:
             self.logger.make_error_entry(f"There is no commands.txt file in {folder}")
             raise ValueError("Missing commands.txt")

@@ -61,36 +61,45 @@ class ProcessStoryContent(object):
             if ext == 'docx':
                 if not has_meta:
                     raise ValueError(f"Folder: {self.folder_path} has no file meta.txt")
-                # copy docx file ensuring file corresponds to slug
-                source = pl.Path(self.story_directory.name) / file
-                target = self.docx_directory + story_meta['slug'] + ".docx"
-                if os.path.exists(target):
-                    os.remove(target)
-                shutil.copy(source, target)
-                # Copy meta file with proper renaming
-                source = pl.Path(self.story_directory.name) / 'meta.txt'
-                target = self.docx_directory + story_meta['slug'] + ".meta"
-                if os.path.exists(target):
-                    os.remove(target)
-                shutil.copy(source, target)
+                self.process_docx(story_meta, file)
+                # # copy docx file ensuring file corresponds to slug
+                # source = pl.Path(self.story_directory.name) / file
+                # target = self.docx_directory + story_meta['slug'] + ".docx"
+                # if os.path.exists(target):
+                #     os.remove(target)
+                # shutil.copy(source, target)
+                # # Copy meta file with proper renaming
+                # source = pl.Path(self.story_directory.name) / 'meta.txt'
+                # target = self.docx_directory + story_meta['slug'] + ".meta"
+                # if os.path.exists(target):
+                #     os.remove(target)
+                # shutil.copy(source, target)
             elif ext == 'jpg':
                 if not has_photos:
                     self.logger.make_error_entry(f"Photo {file} found in folder  without having a photos.txt")
                     raise ValueError("Photos without photos.txt")
                 try:
-                    image_path = self.sst_directory + path_dict[file][1:]
-                    os.makedirs(os.path.dirname(image_path), exist_ok=True)
-                    source = pl.Path(self.story_directory.name) / file
-                    if os.path.exists(image_path):
-                        os.remove(image_path)
-                    shutil.copy(source, image_path)
+                    # NOTE:!!!! This was path_dict[file][1:] and stopped working??  What was the zero entry???
+                    self.process_photo(path_dict[file], file)
+                    # image_path = self.sst_directory + path_dict[file][1:]
+                    # os.makedirs(os.path.dirname(image_path), exist_ok=True)
+                    # source = pl.Path(self.story_directory.name) / file
+                    # if os.path.exists(image_path):
+                    #     os.remove(image_path)
+                    # shutil.copy(source, image_path)
                 except:
                     self.logger.make_error_entry("No path in photos.txt for photo: {file}")
                     raise ValueError(f"No path in photos.txt for photo: {file}")
 
             elif ext == 'txt':
-                if file == 'meta.txt' or file == 'photos.txt' or 'commands.txt':
+                if file == 'meta.txt' or file == 'photos.txt' or file == 'commands.txt':
                     pass
+                elif 'template' in story_meta.keys():
+                    template = story_meta['template']
+                    if "file" not in story_meta or file != story_meta["file"]:
+                        self.logger.make_error_entry(f"Unrecognized text file {file} not mentioned in meta.txt")
+                        raise ValueError(f"Unrecognized text file {file} in {self.folder_path}")
+                    self.process_template(story_meta, file)
                 else:
                     self.logger.make_error_entry(f"Unrecognized text file {file} in {self.folder_path}")
                     raise ValueError(f"Unrecognized text file {file} in {self.folder_path}")
@@ -100,6 +109,39 @@ class ProcessStoryContent(object):
         for dirname in self.galleries:
             # A directory represents a gallery and cannot be nested.
             self.process_gallery(pl.Path(self.story_directory.name) / dirname)
+
+    def process_docx(self, story_meta, file):
+        # copy docx file ensuring file corresponds to slug
+        source = pl.Path(self.story_directory.name) / file
+        target = self.docx_directory + story_meta['slug'] + ".docx"
+        if os.path.exists(target):
+            os.remove(target)
+        shutil.copy(source, target)
+        # Copy meta file with proper renaming
+        source = pl.Path(self.story_directory.name) / 'meta.txt'
+        target = self.docx_directory + story_meta['slug'] + ".meta"
+        if os.path.exists(target):
+            os.remove(target)
+        shutil.copy(source, target)
+
+    def process_template(self, story_meta, file):
+        template_name = story_meta['template']
+        file_path = pl.Path(self.story_directory.name) / file
+        with open(file_path) as stream:
+            try:
+                story_content = yaml.safe_load_all(stream)
+                stream.close()
+            except yaml.YAMLError as exc:
+                self.logger.make_error_entry(f"YAML error encountered in {self.folder_path} with error {exc.args}")
+                raise exc
+
+    def process_photo(self, path, file):
+        image_path = self.sst_directory + path
+        os.makedirs(os.path.dirname(image_path), exist_ok=True)
+        source = pl.Path(self.story_directory.name) / file
+        if os.path.exists(image_path):
+            os.remove(image_path)
+        shutil.copy(source, image_path)
 
     def process_gallery(self, path_to_gallery):
         photo_files = os.listdir(path_to_gallery)
@@ -131,6 +173,7 @@ class ProcessStoryContent(object):
         else:
             self.logger.make_error_entry(f"No metadata.yml file in {path_to_gallery}")
             raise ValueError(f"No metadata.yml file in {path_to_gallery}")
+
 
 def create_empty_dirpath(path):
     """Create an empty directory and make any intermediate directories."""

@@ -17,7 +17,12 @@ class SystemManager(object):
             # Values = 'don', 'sam', (add others as needed)
             sst_user = os.environ['USER']
         except:
-            raise SystemError("No TargetHost Environment Variable specified")
+            raise SystemError("No User Environment Variable specified")
+
+        try:
+            self.commands_prefix = os.environ["USER_PREFIX"]
+        except:
+            self.commands_prefix = ""
 
         self.config = conf.ConfigurationManager()
         self.logs_directory = self.config.get_configuration_parameter('logsDirectory')
@@ -28,7 +33,7 @@ class SystemManager(object):
         self.smtp_port = self.config.get_configuration_parameter('smtpPort', group='email')
 
     def run_command_processor(self):
-        dirs = cmd_proc.ManageFolders(self.config, self.logger, self.system_users)
+        dirs = cmd_proc.ManageFolders(self.config, self.logger, self.system_users, self.commands_prefix)
         dirs.process_commands_top()
         users_wanting_logs = dirs.get_log_requests()
         if users_wanting_logs:
