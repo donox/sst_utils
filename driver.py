@@ -9,7 +9,6 @@ import traceback
 import yaml as YAML
 import pathlib as pl
 from xml.etree import ElementTree as ET
-from new_content.process_new_content_folder import ProcessNewContentFolder as pncf
 from utilities.run_log_command import run_shell_command, OvernightLogger
 
 from system_control.manage_google_drive import ManageGoogleDrive
@@ -19,6 +18,7 @@ from system_control import command_processor as cmd_proc
 import config_private as private
 import tempfile as tf
 from system_control import system_manager as sm
+import yaml
 
 
 # RClone config file in /home/don/.config/rclone/rclone.conf
@@ -30,7 +30,7 @@ def driver():
         # Values = 'don', 'sam', (add others as needed)
         sst_user = os.environ['USER']
     except:
-        raise SystemError("No TargetHost Environment Variable specified")
+        raise SystemError("No USER Environment Variable specified")
 
     # This script is intended to run daily, so there is a notion of 'testing' which is applicable
     # during development or other non-automated execution.  Automated execution requires creating
@@ -46,7 +46,6 @@ def driver():
         prototyping = False
         sst_management = True
         process_images = False  # Probably not needed process
-        load_content_files = False
         build_user_list = False
         build_staff_list = False
         build_horizon_list = False
@@ -55,14 +54,12 @@ def driver():
         # drive_content_dir = "SSTmanagement/NewContent"
         # drive_content_dir = "SSTmanagement/NewContentTest"
         stories_to_process = "all"              # To process specific directories, list them below
-        # stories_to_process = ["dir 1", "dir 2"]
 
 
     else:
         prototyping = False
-        sst_management = False
+        sst_management = True
         process_images = False
-        load_content_files = False
         build_user_list = False
         build_staff_list = False
         build_horizon_list = False
@@ -99,76 +96,6 @@ def driver():
     if sst_management:
         sys_mgr = sm.SystemManager()
         sys_mgr.run_command_processor()
-
-    if load_content_files:
-        # Copy source files from google drive (SSTmanagement/NewContent) to
-        # a temporary directory.
-        # - Move the docx files to sst_static/support/docx_pages
-        # - Build meta files
-        # - Move singlepic files to images directory
-        # - Move gallery sub-directory to gallery directory and create yml file
-        try:  # Trap error in this function so others don't get aborted
-            # First set up a logger for this capability
-            sst_logger = OvernightLogger('load_content_files', logs_directory)
-            sst_logger.make_info_entry('Start Docx Loading')
-
-            manage_drive = ManageGoogleDrive()
-
-            temps = tf.TemporaryDirectory(prefix='docx', dir=temp_directory)
-
-            # First, pick up configuration yaml file
-            filename = 'config_users.yaml'
-            try:
-                manage_drive.download_file(sst_logger, "SSTmanagement/", filename, temps.name)
-                with open(pl.Path(temps.name) / filename, 'r', encoding='utf-8') as fd:
-                    res = YAML.safe_load_all(fd)
-                    docs = [doc for doc in res]
-                    fd.close()
-                users = [x["name"] for x in docs if x]
-                user_data = dict()
-                for n, user in enumerate(users):
-                    if user:
-                        user_data[user] = docs[n+1]
-            except Exception as e:
-                print(e)
-                traceback.print_exc()
-
-            try:
-                # pull everything from Google Drive to local temp directory
-                manage_drive.download_directory(sst_logger, drive_content_dir, temps.name)
-                if stories_to_process == "all":
-                    stories = os.listdir(temps.name)
-                else:
-                    stories = stories_to_process
-                for story_dir in stories:
-                    dirpath = temps.name
-                    if os.path.isdir(dirpath):
-                        content = os.listdir(dirpath)
-                        dirnames = []
-                        filenames = []
-                        for x in content:
-                            if os.path.isdir(dirpath + '/' + x):
-                                dirnames.append(x)
-                            else:
-                                filenames.append(x)
-                        try:
-                            process_folder = pncf(sst_logger, dirpath, dirnames, filenames, temp_directory,
-                                                  docx_directory, sst_directory, image_directory, gallery_directory)
-                            result = process_folder.process_content()
-                        except Exception as e:
-                            sst_logger.make_error_entry(f"Folder {dirpath} has an error: {e.args}")
-                    else:
-                        sst_logger.make_error_entry(f"Folder {dirpath} from story list {stories} not found.")
-            except Exception as e:
-                print(e)
-                traceback.print_exc()
-
-            # Log completion
-            sst_logger.make_info_entry('Complete Docx Loading')
-            sst_logger.close_logger()
-            summary_logger.make_info_entry('load_content_files completed normally')
-        except Exception as e:
-            summary_logger.make_error_entry('load_content_files failed with exception: {}'.format(e.args))
 
     if build_user_list or build_staff_list or build_horizon_list:
         # Copy Sunnyside Resident Phone Directory from google drive (SSTmanagement/UserData) to
@@ -261,10 +188,14 @@ def driver():
             # cmds = cmd_proc.SystemUser(temp_directory, logger)
             # print(cmds.users)
 
-            dirs = cmd_proc.ManageFolders(temp_directory, logger)
-            dirs.process_commands_top()
+            # dirs = cmd_proc.ManageFolders(temp_directory, logger)
+            # dirs.process_commands_top()
             # dirs.process_commands("SSTmanagement/NewContentDev/", "content", ["identity", "single"])
-
+            file_path = '/home/don/Documents/Temp/Sunnybear_New_Year.txt'
+            with open(file_path) as stream:
+                story_content = yaml.safe_load_all(stream)
+                for line in story_content:
+                    print(line)
             foo = 3
 
         except Exception as e:
