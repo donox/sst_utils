@@ -15,7 +15,7 @@
         </div>
         <div class="src-flex-item">
             %for item in entry['text']:
-                ${item}
+                <p>${item}</p>
             %endfor
         </div>
     </div>
