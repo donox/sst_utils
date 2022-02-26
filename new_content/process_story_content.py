@@ -110,7 +110,7 @@ class ProcessStoryContent(object):
 
     def _copy_meta_file(self, story_meta, out_dir=None):
         if not out_dir:
-            out_dir = self.docx_directory
+            out_dir = pl.Path(self.docx_directory)
         # Copy meta file with proper renaming
         source = pl.Path(self.story_directory.name) / 'meta.txt'
         target = out_dir / (story_meta['slug'] + ".meta")
