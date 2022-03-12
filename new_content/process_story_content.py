@@ -48,17 +48,6 @@ class ProcessStoryContent(object):
                     raise exc
         else:
             has_meta = False
-        # if "photos.txt" in self.filenames:
-        #     has_photos = True
-        #     with open(pl.Path(self.story_directory.name) / 'photos.txt') as stream:
-        #         path_dict = dict()
-        #         for path in stream.readlines():
-        #             if path.endswith('\n'):
-        #                 path = path[0:-1]
-        #             photo_name = path.split('/')[-1]
-        #             path_dict[photo_name] = path
-        # else:
-        #     has_photos = False
 
         for file in self.filenames:
             file_parts = file.split(".")
@@ -154,14 +143,16 @@ class ProcessStoryContent(object):
             ndx = 1
         image_path = self.sst_directory + path[ndx:]
         source = pl.Path(self.story_directory.name) / file
-        if self.first_photo:
-            self.first_photo = False
-            if os.path.exists(image_path):
-                if os.path.isdir(image_path):
-                    shutil.rmtree(image_path)
-                else:
-                    os.remove(image_path)
-            os.makedirs(os.path.dirname(image_path))
+        # Note: Is there a reason this code should be here.  It's disabled here
+        # as a test to see if there are unexpected (forgotten) issues. 
+        # if self.first_photo:
+        #     self.first_photo = False
+        #     if os.path.exists(image_path):
+        #         if os.path.isdir(image_path):
+        #             shutil.rmtree(image_path)
+        #         else:
+        #             os.remove(image_path)
+        #     os.makedirs(os.path.dirname(image_path))
         shutil.copy(source, image_path)
 
     def process_gallery(self, path_to_gallery):
