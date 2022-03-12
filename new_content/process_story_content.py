@@ -144,7 +144,7 @@ class ProcessStoryContent(object):
         image_path = self.sst_directory + path[ndx:]
         source = pl.Path(self.story_directory.name) / file
         # Note: Is there a reason this code should be here.  It's disabled here
-        # as a test to see if there are unexpected (forgotten) issues. 
+        # as a test to see if there are unexpected (forgotten) issues.
         # if self.first_photo:
         #     self.first_photo = False
         #     if os.path.exists(image_path):
