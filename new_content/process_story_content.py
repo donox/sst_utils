@@ -6,6 +6,7 @@ from system_control.manage_google_drive import ManageGoogleDrive as mgd
 import tempfile as tf
 import pathlib as pl
 from mako.template import Template
+from new_content import validate_shortcodes as vs
 from mako.lookup import TemplateLookup
 from mako.runtime import Context
 
@@ -91,6 +92,9 @@ class ProcessStoryContent(object):
     def process_docx(self, story_meta, file):
         # copy docx file ensuring file corresponds to slug
         source = pl.Path(self.story_directory.name) / file
+        val_sc = vs.ValidateShortcodes(source, 'docx', self.logger)
+        val_sc.clean_docx()           # Already duplicated in nikola command
+        val_sc.process_shortcodes()
         target = self.docx_directory + story_meta['slug'] + ".docx"
         if os.path.exists(target):
             os.remove(target)
