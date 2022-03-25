@@ -11,13 +11,16 @@ class ValidateShortcodes(object):
         self.logger = logger
         self.filepath = filepath
         self.filetype = filetype
-        self.shortc__re = re.compile(r'(\{\{% +(?P<sc_name>((\w|:|\-|;|_)+)\s+))')
+        self.shortcode_re = re.compile(r'(\{\{% +(?P<sc_name>((\w|:|\-|;|_)+)\s+))')
         self.sc_attr = re.compile(r'(?P<attribute>\w+)="(?P<value>(\w|_|\-|:|;|/|\.)+)"')
         # Translate table for non-ascii chars we might use.
         self.transl_table = dict([(ord(x), ord(y)) for x, y in zip(u"‘’´“”–-", u"'''\"\"--")])
         self.singlepic_attributes = ['image', 'width', 'height', 'alignment', 'caption', 'title', 'has_borders']
         self.singlepic_required_attributes = ['image']
-        self.shortcodes = {'meta_info': (self._generic, None, None),
+        self.meta_info_attributes = ['info_type']
+        self.box_attributes = ['name', 'direction', '*']             # Need to add support for arbitrary attributes
+        self.box_required_attributes = ['name']
+        self.shortcodes = {'meta_info': (self._generic, self.meta_info_attributes, None),
                            'disposition': (self._generic, None, None),
                            'links': (self._generic, None, None),
                            'gallery': (self._generic, None, None),
@@ -66,7 +69,7 @@ class ValidateShortcodes(object):
                 fd.close()
             rest_of_file = ''.join(file_content)
             while True:
-                next_shortcode = re.search(self.shortc__re, rest_of_file)
+                next_shortcode = re.search(self.shortcode_re, rest_of_file)
                 if next_shortcode:
                     sc_name = next_shortcode.group('sc_name').strip()
                     if sc_name.lower() in self.shortcodes.keys():
@@ -91,8 +94,10 @@ class ValidateShortcodes(object):
 
                 else:
                     break
+        except FileNotFoundError as e:
+            self.logger.make_error_entry(f'File {self.filepath} not found - does the actual filename contain spaces? ')
         except Exception as e:
-            foo = 3
+            self.logger.make_error_entry(f'Error: {e.args}')
 
     def _make_attribute_dictionary(self, sc_text):
         """Create dictionary of attributes/values for shortcode. """
@@ -110,11 +115,21 @@ class ValidateShortcodes(object):
         """Verify that attributes exist and are spelled correctly."""
         if not valid_attributes:
             return
-        for key in attr_dict.keys():
-            if key.lower() not in valid_attributes:
-                self.logger.make_error_entry(f"Unrecognized attribute {key} in {sc_name}.")
-            elif key not in valid_attributes:
-                self.logger.make_error_entry(f"Improper capitalization for attribute {key} in {sc_name}.")
+        if '*' not in valid_attributes:
+            for key in attr_dict.keys():
+                if key.lower() not in valid_attributes:
+                    self.logger.make_error_entry(f"Unrecognized attribute {key} in {sc_name}.")
+                elif key not in valid_attributes:
+                    self.logger.make_error_entry(f"Improper capitalization for attribute {key} in {sc_name}.")
+        else:
+            # Check capitalization on any that happen to be in valid_attributes as any other must be assumed valid
+            for key in attr_dict.keys():
+                if key.lower() in valid_attributes and key not in valid_attributes:
+                    self.logger.make_error_entry(f"Improper capitalization for attribute {key} in {sc_name}.")
+        if required_attributes:
+            for attr_name in required_attributes:
+                if attr_name not in attr_dict.keys():
+                    self.logger.make_error_entry(f"Required attribute {attr_name} not found in shortcode {sc_name}")
 
     def _singlepic(self, sc_name, sc_text, attrs_valid, attrs_required):
         try:
@@ -135,6 +150,8 @@ class ValidateShortcodes(object):
         except Exception as e:
             self.logger.make_error_entry(f"Encountered exception {e.args} when validating singlepic.")
 
+    def _xx(self):
+        pass
 
     def _generic(self, sc_name, sc_text, attrs_valid, attrs_required):
         try:
@@ -143,8 +160,6 @@ class ValidateShortcodes(object):
         except Exception as e:
             self.logger.make_error_entry(f"Encountered exception {e.args} when validating {sc_name}.")
 
-    def _xx(self):
-        pass
 
     def _xx(self):
         pass

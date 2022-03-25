@@ -1,8 +1,11 @@
 import pathlib as pl
 import tempfile as tf
 import traceback
+import os
+import shutil
 
 import yaml as YAML
+from yaml.scanner import ScannerError
 
 from new_content.process_story_content import ProcessStoryContent as PSC
 from system_control import manage_google_drive as mgd
@@ -66,10 +69,14 @@ class ManageFolders(object):
         self.config = config
         self.logger = logger
         self.temp_dir = config.get_configuration_parameter('tempDirectory')
+        # Note: local_temp is reused - it must be emptied before loading a new command file (get_commands)
+        self.local_temp = tf.TemporaryDirectory(dir=self.temp_dir, prefix='cmd')
         self.users = users
-        self.command_prefix = command_prefix    # Prefix to append to top level commands.txt to allow multiple users
+        self.command_prefix = command_prefix  # Prefix to append to top level commands.txt to allow multiple users
         self.manage_drive = mgd.ManageGoogleDrive()
         self.top_folder = config.get_configuration_parameter("driveSSTManagement", group="drive paths")
+        # self.current_folder is the full path to the folder being processed (leaf node, a.k.a. folder)
+        # folder is used as the name of the specific folder (leaf node) being processed.
         self.current_folder = self.top_folder
         self.valid_command_sets = ["top", "content", "story"]
         self.valid_commands = \
@@ -77,7 +84,7 @@ class ManageFolders(object):
              "content": ["identity", "process_single_folder", "all"],
              "story": ["identity", "story"]
              }
-        self.command_definitions = \
+        self.command_subcommands = \
             {("top", "identity"): self._command_identity,
              ("top", "process_single_folder"): self._command_single_folder,
              ("content", "identity"): self._command_identity,
@@ -87,8 +94,70 @@ class ManageFolders(object):
              ("story", "identity"): self._command_identity,
              ("story", "story"): self._command_process_story,
              }
+        self.subcommand_definitions = \
+            {"identity": ['person', 'send_log'],
+             "process_single_folder": ['folder', 'folder_type'],
+             }
         self.context = []
         self.futures = []
+
+    def validate_command_file(self, directory, file):
+        """Read and check command file for possible errors."""
+        err = self.logger.make_error_entry
+        filepath = pl.Path(directory) / file
+        try:
+            with open(filepath) as cmd_file:
+                self.logger.make_info_entry(f"Validating file: {file}.")
+                cmd_set = None
+                curr_cmd = None
+                for line_no, line in enumerate(cmd_file.readlines()):
+                    line_strip = line.strip()
+                    if len(line_strip) < 3:
+                        break
+                    if line_strip[0] == '#':
+                        break
+                    first_tab = line.find('\t')
+                    if first_tab != -1:
+                        err(f"File contains at least one tab at position {first_tab}")
+                    if line.startswith("---"):
+                        curr_cmd = None
+                    else:
+                        line_parts = line.split('#')[0].split(':')
+                        el = line_parts[0]
+                        if len(line_parts) < 2:
+                            err(f"Command_set does not contain a specific command_set ")
+                            raise ValueError()
+                        el2 = line_parts[1].strip().lower()
+                        if not curr_cmd:  # Validate command_set
+                            if not cmd_set:
+                                if el != 'command_set':
+                                    err(f"'Command_set' not found in file.")
+                                    raise ValueError()
+                                if el2 not in self.valid_command_sets:
+                                    err(f"{el2} in line {line_no}' is not a valid command_set")
+                                    raise ValueError()
+                                cmd_set = el2
+                            else:  # must be a command appropriate for the command_set
+                                if el != 'command':
+                                    err(f"{el} is not a part of command {cmd_set}")
+                                    raise ValueError()
+                                curr_cmd = el2
+                        else:
+                            if not self._check_function_in_subcommand_definitions(curr_cmd, el):
+                                err(f"{el} is not valid in this command: {curr_cmd}")
+                                raise ValueError()
+        except ValueError as e:
+            cmd_file.close()
+            return False
+        cmd_file.close()
+        return True
+
+    def _check_function_in_subcommand_definitions(self, cmd, sub_cmd):
+        if cmd not in self.subcommand_definitions.keys():
+            return False
+        if sub_cmd not in self.subcommand_definitions[cmd]:
+            return False
+        return True
 
     def get_folder_names(self, folder):
         """Retrieve list of the names of the contained folders from drive within a given source folder."""
@@ -114,47 +183,74 @@ class ManageFolders(object):
                 files.append(elements[-1])
         return files
 
-    def get_commands(self, folder, command_set):
+    def get_commands(self, folder):
         """Load commands.txt as yaml list of documents (dictionaries)."""
         try:
             filename = "commands.txt"
-            if command_set == "top":
+            if folder == "SSTmanagement":
                 filename = self.command_prefix + filename
-            temp_dir = tf.TemporaryDirectory(dir=self.temp_dir, prefix='cmd')
-            self.manage_drive.download_file(self.logger, folder, filename, temp_dir.name)
-            with open(pl.Path(temp_dir.name) / filename, 'r', encoding='utf-8') as fd:
+            # We must clear the temp directory before downloading - this soln is more general than needed
+            # but works in all cases
+            for root, dirs, files in os.walk(self.local_temp.name):
+                for f in files:
+                    os.unlink(os.path.join(root, f))
+                for d in dirs:
+                    shutil.rmtree(os.path.join(root, d))
+            self.manage_drive.download_file(self.logger, self.current_folder, filename, self.local_temp.name)
+            foo = os.listdir(self.local_temp.name)
+            if 'commands.txt' not in foo and 'don_commands.txt' not in foo:
+                bar = 3
+            if not self.validate_command_file(self.local_temp.name, filename):
+                self.logger.make_error_entry(f"Invalid command file in folder: {folder}")
+                raise ValueError("Invalid Command File")
+            with open(pl.Path(self.local_temp.name) / filename, 'r', encoding='utf-8') as fd:
                 res = YAML.safe_load_all(fd)
                 docs = [doc for doc in res]
                 fd.close()
-                if not docs[-1]:
+                if not docs[-1]:   # Remove empty terminating line if it exists
                     docs.pop()
             return docs
+        except ScannerError as e:
+            self.logger.make_error_entry(f"YAML error reading commands.txt: error: {e.args}\n\tBeware of tab chars")
         except Exception as e:
             self.logger.make_error_entry(f"Error retreiving commands.txt in folder {folder} with error: {e.args}")
             raise e
 
-    def process_commands_top(self):
-        context = []  # state of work already done - each element is a dictionary
-        futures = []  # stack of work to be done - each element is a function (continuation)
-        self.process_commands(self.top_folder, "top")
+    def get_command_file(self, folder):
+        """Load commands.txt as list of txt lines."""
+        try:
+            filename = "commands.txt"
+            filename = self.command_prefix + filename
+            self.manage_drive.download_file(self.logger, folder, filename, self.local_temp.name)
+            with open(pl.Path(self.local_temp.name) / filename, 'r', encoding='utf-8') as fd:
+                res = fd.readlines()
+                fd.close()
+            return res
+        except Exception as e:
+            self.logger.make_error_entry(
+                f"Error retreiving commands.txt as text in folder {folder} with error: {e.args}")
+            raise e
 
-    def process_commands(self, folder, command_set):
+    def process_commands_top(self):
+        self.process_commands(self.top_folder)
+
+    def process_commands(self, folder):
+        """Open and initiate processing of a folder containing commands.txt"""
+        cmds = self._get_command_set( folder)
+        command_set = cmds[0]['command_set'].lower()
         if command_set not in self.valid_command_sets:
-            self.logger(f"Invalid command_set: {command_set} for folder: {folder}")
-            raise ValueError(f"Invalid command_set: {command_set}")
+            self.logger(f"Invalid command set: {command_set} for folder: {folder}")
+            raise ValueError(f"Invalid command set: {command_set}")
         valid_commands = self.valid_commands[command_set]
-        cmds = self._get_command_set(command_set, folder)
-        for command in self._generate_commands(cmds, valid_commands):
-            print(f"Command {command} to be executed.")  # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            if 'command' not in command:
-                self.logger.make_error_entry(f"Command: {command} does not specify the 'command' name.")
-                raise ValueError(f"Invalid command: {command} - missing 'command'")
+        for command in self._generate_commands(cmds[1:], valid_commands):
+            print(f"Command {command}  in folder {folder} to be executed.")  # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            # 'command' has already been checked for existence in the generator
             command_name = command['command']
             key = (command_set, command_name)
-            if key not in self.command_definitions:
-                self.logger(f"Command: {command} not valid for command_set: {command_set}")
+            if key not in self.command_subcommands:
+                self.logger(f"Command: {command} not valid for command_set: {command_set} in folder: {folder}")
                 raise ValueError(f"Invalid command: {command} - not supported")
-            cmd = self.command_definitions[key]
+            cmd = self.command_subcommands[key]
             cmd(command)
 
     def get_log_requests(self):
@@ -176,22 +272,19 @@ class ManageFolders(object):
     def _context_find(self, item):
         return item
 
-    def _get_command_set(self, command_set, folder):
+    def _get_command_set(self, folder):
         """Retrieve command set for a folder as a list
         """
-        cmds = self.get_commands(folder, command_set)
+        cmds = self.get_commands(folder)
         if not cmds:
             self.logger.make_error_entry(f"There is no commands.txt file in {folder}")
             raise ValueError("Missing commands.txt")
         try:
-            cmd_set = cmds[0]["command_set"].lower()
+            _ = cmds[0]["command_set"]
         except KeyError as e:
             self.logger.make_error_entry(f"No command_set key found in folder: {folder}")
             raise e
-        if cmd_set != command_set:
-            self.logger.make_error_entry(f"Invalid command set: {cmd_set}, expecting: {command_set}")
-            raise ValueError(f"Invalid command set {cmd_set}")
-        return cmds[1:]
+        return cmds
 
     def _generate_commands(self, command_list, allowable_commands):
         """Create generator for list of allowable commands."""
@@ -203,7 +296,7 @@ class ManageFolders(object):
                     raise ValueError(f"Invalid command: {cmd}")
                 yield command_dict
             except Exception as e:
-                self.logger.make_error_entry(f"Invalid command: {command_dict}")
+                self.logger.make_error_entry(f"Invalid or missing command: {command_dict}")
                 raise ValueError(f"Invalid command dictionary: {command_dict}")
 
     def _get_command_attribute(self, attribute, command, default=None):
@@ -228,10 +321,14 @@ class ManageFolders(object):
     def _command_all(self, command):
         content = self.manage_drive.directory_list_directories(self.logger, self.current_folder)
         for item in content:
-            self._command_single_folder(command, folder=item, folder_type="story")
+            current_folder = self.current_folder
+            self.current_folder += '/' + item
+            self.process_commands(item)
+            self.current_folder = current_folder
 
     def _command_single_folder(self, command, folder=None, folder_type=None):
         # Keyword args are to allow the 'All' command to use this code and provide otherwise missing values.
+        # folder represents a leaf node not yet appended to self.current_folder
         try:
             if not folder:
                 folder = self._get_command_attribute("folder", command)
@@ -239,10 +336,13 @@ class ManageFolders(object):
                 folder_type = self._get_command_attribute("folder_type", command)
             current_folder = self.current_folder
             self.current_folder += '/' + folder
-            if folder_type == "site_content":  # may contain multiple folders of website content
-                self.process_commands(self.current_folder, 'content')
+            # Allow for use of either underscore or dash
+            # Note: site_content implies processing a single folder in the case where
+            #       there may be other folders that are to be skipped (e.g., at top level)
+            if folder_type == "site_content" or folder_type == 'site-content':
+                self.process_commands(folder)
             elif folder_type == "story":  # content for a single story (or part of one)
-                self.process_commands(self.current_folder, 'story')
+                self.process_commands(folder)
             else:
                 self.logger.make_error_entry(f"Unrecognized folder_type: {folder_type} for folder: {folder}")
                 self.current_folder = current_folder
@@ -255,6 +355,8 @@ class ManageFolders(object):
             self.current_folder = current_folder
 
     def _command_process_story(self, command):
+        """Process 'story' content - a page that generates actual web content."""
+        # A story may be either a docx file,  a template file, or an md file
         docx_directory = self.config.get_configuration_parameter('docxDirectory')
         sst_directory = self.config.get_configuration_parameter('SSTDirectory')
         image_directory = self.config.get_configuration_parameter('imageDirectory')

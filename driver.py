@@ -14,12 +14,11 @@ from utilities.run_log_command import run_shell_command, OvernightLogger
 
 from system_control.manage_google_drive import ManageGoogleDrive
 from manage_users.create_resident_list import CreateUserList
-from utilities.send_email import ManageEmail
-from system_control import command_processor as cmd_proc
 import config_private as private
 import tempfile as tf
 from system_control import system_manager as sm
 import yaml
+from new_content import validate_shortcodes as vs
 
 
 # RClone config file in /home/don/.config/rclone/rclone.conf
@@ -41,7 +40,7 @@ def driver():
     start_notest = dt.time(1, 0)  # but not if between 1am and 4am
     end_notest = dt.time(3, 0)
     if start_notest < dt.datetime.now().time() < end_notest:
-        do_testing = False
+        do_testing = True
 
     if do_testing:
         prototyping = False
@@ -177,32 +176,20 @@ def driver():
         db_name = 'sst'
         drive_dir_to_download = config['drive paths']['driveAdmin'] + config['drive paths']['driveMinutes']
         target_directory = work_directory + 'worktemp/'
+        test_dir = temp_directory + 'validate/'
         try:
-            # mgr = ManageEmail(email_username, email_password, smtp_server, smtp_port)
-            # mgr.add_recipient("don@theoxleys.com")
-            # mgr.add_recipient("donoxley@gmail.com")
-            # mgr.set_subject("Log result of running test")
-            # mgr.add_attachment(logs_directory + "summary_log.log")
-            # mgr.set_body("THis is the body")
-            # mgr.send_email()
+            filepath = test_dir + 'Springtime.docx'
+            filetype = 'docx'
+            val_sc = vs.ValidateShortcodes(filepath, filetype, logger)
+            val_sc.clean_docx()
+            val_sc.process_shortcodes()
+            logger.close_logger()
 
-            # cmds = cmd_proc.SystemUser(temp_directory, logger)
-            # print(cmds.users)
-
-            # dirs = cmd_proc.ManageFolders(temp_directory, logger)
-            # dirs.process_commands_top()
-            # dirs.process_commands("SSTmanagement/NewContentDev/", "content", ["identity", "single"])
-
-            foo = 3
-            from algoliasearch.search_client import SearchClient
-            # API keys below contain actual values tied to your Algolia account
-            client = SearchClient.create('PRUUKBLL4P', 'd4d28b8769e9de1bc5b2c464ed6739a4')
-            index = client.init_index('sst_index')
         except Exception as e:
             print(e)
             traceback.print_exc()
 
-    if False or prototyping:
+    if False and prototyping:
         logger = OvernightLogger('prototyping', logs_directory)
         db_name = 'sst'
         drive_dir_to_download = config['drive paths']['driveAdmin'] + config['drive paths']['driveMinutes']

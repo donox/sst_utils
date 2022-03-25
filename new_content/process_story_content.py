@@ -36,7 +36,7 @@ class ProcessStoryContent(object):
             has_meta = True
             with open(pl.Path(self.story_directory.name) / 'meta.txt') as stream:
                 try:
-                    story_meta_tmp = yaml.safe_load(stream)
+                    story_meta_tmp = yaml.safe_load(stream.read().replace('\t', ' '))
                     story_meta = dict()
                     for key in story_meta_tmp:  # the meta file may have leading periods on the attributes, remove them
                         ky = key
@@ -76,12 +76,15 @@ class ProcessStoryContent(object):
                 elif 'template_mako' in story_meta.keys():
                     template = story_meta['template_mako']
                     if "file" not in story_meta or file != story_meta["file"]:
-                        self.logger.make_error_entry(f"Unrecognized text file {file} not mentioned in meta.txt")
+                        self.logger.make_error_entry(f"Unrecognized text file {file} in {self.folder_path}")
                         raise ValueError(f"Unrecognized text file {file} in {self.folder_path}")
                     self.process_template(story_meta, file)
                 else:
                     self.logger.make_error_entry(f"Unrecognized text file {file} in {self.folder_path}")
                     raise ValueError(f"Unrecognized text file {file} in {self.folder_path}")
+            elif ext == 'md':
+                self.logger.make_error_entry(f"{file} or type .md in {self.folder_path} not yet implemented.")
+                raise ValueError(f"{file} or type .md in {self.folder_path} not yet implemented.")
             else:
                 self.logger.make_error_entry(f"Unrecognized file type {ext} in {self.folder_path}")
                 raise ValueError(f"Unrecognized file type {ext} in {self.folder_path}")
@@ -122,14 +125,18 @@ class ProcessStoryContent(object):
             except yaml.YAMLError as exc:
                 self.logger.make_error_entry(f"YAML error encountered in {self.folder_path} with error {exc.args}")
                 raise exc
-        filename = 'new_content/templates/' + template_name + '.mako'
+        if not template_name.endswith('.mako'):
+            filename = 'new_content/templates/' + template_name + '.mako'
+        else:
+            filename = 'new_content/templates/' + template_name
         template = Template(filename=filename)
         context = dict()
         context["head"] = story_content[0]
         context["body"] = []
         for el in story_content[1:]:
             if el:
-                el['picture'] = story_meta['photo_path'] + el['picture']
+                if 'photo_path' in el.keys():     # support pictures - such as in Sunnybear
+                    el['picture'] = story_meta['photo_path'] + el['picture']
                 context["body"].append(el)
         results = template.render(**context)
         results = results.replace('\n\n', '\n')     # somehow, md ignores html following two blank lines.
@@ -179,7 +186,8 @@ class ProcessStoryContent(object):
                         if 'gallery path' in keys:
                             gallery_path = vals[keys.index('gallery path')]
                 if not gallery_path:
-                    raise (f"Missing gallery path in {gallery_path}")
+                    self.logger.make_error_entry(f"Missing gallery path.  Gallery meta: {gallery_meta}")
+                    raise ValueError(f"Missing gallery path")
                 gal_path = self.sst_directory + gallery_path[1:]
                 create_empty_dirpath(gal_path)
                 shutil.copy(resolved_gallery_path / 'metadata.yml', gal_path)
