@@ -187,7 +187,7 @@ class ManageFolders(object):
         """Load commands.txt as yaml list of documents (dictionaries)."""
         try:
             filename = "commands.txt"
-            if folder == "SSTmanagement":
+            if folder == self.top_folder:
                 filename = self.command_prefix + filename
             # We must clear the temp directory before downloading - this soln is more general than needed
             # but works in all cases
