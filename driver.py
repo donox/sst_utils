@@ -173,6 +173,52 @@ def driver():
 
     if prototyping:
         logger = OvernightLogger('prototyping', logs_directory)
+        drive_dir_to_download = config['drive paths']['driveAdmin'] + config['drive paths']['driveMinutes']
+        target_directory = work_directory + 'worktemp/'
+        test_dir = temp_directory + 'fix_meta_paths/'
+        path_element_to_find = 'pages/aa-activities-index'
+        path_element_to_replace= 'pages'
+        try:
+            for root, dirs, files in os.walk(test_dir):
+                print(f"{root}")
+                # for dir in dirs:
+                #     print(f"    DIR:  {dir}")
+                # for file in files:
+                #     print(f"    FILE: {file}")
+                if 'meta.txt' in files:
+                    meta_path = os.path.join(root, 'meta.txt')
+                    changed = False
+                    try:
+                        with open(meta_path) as stream:
+                            story_meta_tmp = yaml.safe_load(stream.read().replace('\t', ' '))
+                            if not story_meta_tmp:
+                                print(f"meta.txt is empty")
+                            else:
+                                path = story_meta_tmp['.. path']
+                                print(f"{path}")
+                                if path_element_to_find in path:
+                                    path_new = path.replace(path_element_to_find, path_element_to_replace)
+                                    print(f"\nOLD: {path}")
+                                    print(f"NEW: {path_new}")
+                                    story_meta_tmp['.. path'] = path_new
+                                    changed = True
+                            stream.close()
+                        if changed:
+                            with open(meta_path, 'w') as stream:
+                                yaml.safe_dump(story_meta_tmp, stream)
+                                stream.close()
+                            foo =- 3
+                    except Exception as e:
+                        foo = 4
+
+            logger.close_logger()
+
+        except Exception as e:
+            print(e)
+            traceback.print_exc()
+
+    if False and prototyping:
+        logger = OvernightLogger('prototyping', logs_directory)
         db_name = 'sst'
         drive_dir_to_download = config['drive paths']['driveAdmin'] + config['drive paths']['driveMinutes']
         target_directory = work_directory + 'worktemp/'
