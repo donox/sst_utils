@@ -36,8 +36,8 @@ class ManageGoogleDrive(object):
         try:
             ls_cmd = self.cmd_list_files.format(directory)
             res = run_shell_command(ls_cmd, logger, result_as_string=True)
-            res = res.decode('utf-8')
-            res = self.split_directory_listing(res)
+            tmp = res.decode('utf-8')
+            res = self.split_directory_listing(tmp)
             if res[-1] == '':
                 res.pop()
             return res
