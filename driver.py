@@ -45,27 +45,18 @@ def driver():
     if do_testing:
         prototyping = False
         sst_management = True
-        process_images = False  # Probably not needed process
         build_user_list = False
         build_staff_list = False
         build_horizon_list = False
         create_combined_login = False
-        drive_content_dir = "SSTmanagement/NewContentDev"
-        # drive_content_dir = "SSTmanagement/NewContent"
-        # drive_content_dir = "SSTmanagement/NewContentTest"
-        stories_to_process = "all"  # To process specific directories, list them below
 
     else:           # Intended for cron job run nightly
         prototyping = False
         sst_management = False
-        process_images = False
         build_user_list = False
         build_staff_list = False
         build_horizon_list = False
         create_combined_login = False
-        drive_content_dir = "SSTmanagement/NewContent"
-        stories_to_process = "all"  # To process specific directories, list them below
-        # stories_to_process = ["dir 1", "dir 2"]
 
     config = configparser.ConfigParser()
 
@@ -155,21 +146,6 @@ def driver():
             summary_logger.make_info_entry('build_users_csv completed normally')
         except Exception as e:
             summary_logger.make_error_entry('build_users_csv failed with exception: {}'.format(e.args))
-
-    if process_images:
-        # THIS MAY NOT BE NEEDED AS IMAGES ARE HANDLED WHEN LOADING OTHER CONTENT FILES
-        target_directory = work_directory + 'auto_update'  # auto_update is temporary working dir - emptied at use
-        try:
-            process_images_log = OvernightLogger('process_images', logs_directory)
-            process_images_log.make_info_entry('Start Image Importing')
-
-
-        except Exception as e:
-            summary_logger.make_error_entry('process_images failed: {}'.format(e.args))
-            process_images_log.make_error_entry('process_images failed: {}'.format(e.args))
-
-        process_images_log.make_info_entry('Complete Image Importing')
-        process_images_log.close_logger()
 
     if prototyping:
         logger = OvernightLogger('prototyping', logs_directory)
