@@ -8,6 +8,7 @@ import yaml as YAML
 from yaml.scanner import ScannerError
 
 from new_content.process_story_content import ProcessStoryContent as PSC
+from new_content.relocate_info import RelocateInformation as RI
 from system_control import manage_google_drive as mgd
 
 
@@ -78,14 +79,16 @@ class ManageFolders(object):
         # self.current_folder is the full path to the folder being processed (leaf node, a.k.a. folder)
         # folder is used as the name of the specific folder (leaf node) being processed.
         self.current_folder = self.top_folder
-        self.valid_command_sets = ["top", "content", "story"]
+        self.valid_command_sets = ["top", "content", "story", "transfer_files"]
         self.valid_commands = \
-            {"top": ["identity", "process_single_folder"],
+            {"top": ["identity", "change_folder", "process_single_folder"],
              "content": ["identity", "process_single_folder", "all"],
-             "story": ["identity", "story"]
+             "story": ["identity", "story"],
+             "transfer_files": ["identity", "move_files"]
              }
         self.command_subcommands = \
             {("top", "identity"): self._command_identity,
+             ("top", "change_folder"): self._command_change_folder,
              ("top", "process_single_folder"): self._command_single_folder,
              ("content", "identity"): self._command_identity,
              ("content", "process_single_folder"): self._command_single_folder,
@@ -93,10 +96,15 @@ class ManageFolders(object):
              ("content", "process_single_folder"): self._command_single_folder,
              ("story", "identity"): self._command_identity,
              ("story", "story"): self._command_process_story,
+             ("transfer_files", "identity"): self._command_identity,
+             ("transfer_files", "move_files"): self._command_transfer_files
              }
+        # Note:  this is a potential bug if the same subcommand exists in two different commands with different attrs
         self.subcommand_definitions = \
             {"identity": ['person', 'send_log'],
              "process_single_folder": ['folder', 'folder_type'],
+             "change_folder": ['folder'],
+             "move_files": ['target_directory'],
              }
         self.context = []
         self.futures = []
@@ -319,6 +327,7 @@ class ManageFolders(object):
         self._context_add(command, users=persons)
 
     def _command_all(self, command):
+        """Process all folders in containing folder."""
         content = self.manage_drive.directory_list_directories(self.logger, self.current_folder)
         for item in content:
             current_folder = self.current_folder
@@ -364,6 +373,31 @@ class ManageFolders(object):
         process_folder = PSC(self.logger, self.current_folder, self.temp_dir,
                              docx_directory, sst_directory, image_directory, gallery_directory)
         process_folder.process_content()
+
+    def _command_transfer_files(self, command):
+        """Transfer files to pages directory for processing
+
+        Files are transferred without checking or change. This presumes they
+        are suitable for nikola processing and have been updated on Drive."""
+        relocator = RI(self.logger, self.current_folder, self.config)
+        print(f"Command: {command} called")
+        target_dir = self._get_command_attribute("target_directory", command)
+        relocator.move_folder_of_pagefiles(target_dir)
+
+    def _command_change_folder(self, command):
+        """Modify top folder."""
+        added_folder = self._get_command_attribute("folder", command)
+        self.top_folder += '/' + added_folder
+        self.current_folder = self.top_folder
+        print(f"Command: {command} called - top folder now: {self.top_folder}")
+
+    def _command_xxx(self, command):
+        print(f"Command: {command} called")
+        pass
+
+    def _command_xxx(self, command):
+        print(f"Command: {command} called")
+        pass
 
     def _command_xxx(self, command):
         print(f"Command: {command} called")
