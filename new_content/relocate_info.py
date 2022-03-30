@@ -9,6 +9,7 @@ from mako.template import Template
 from new_content import validate_shortcodes as vs
 from mako.lookup import TemplateLookup
 from mako.runtime import Context
+from config_private import test_run
 
 
 class RelocateInformation(object):
@@ -41,9 +42,12 @@ class RelocateInformation(object):
                     if file.startswith(file_base):
                         paired_file = file
                         break
-                if paired_file:
-                    shutil.copy(self.local_temp.name + '/' + file, real_target + metafile)
-                    shutil.copy(self.local_temp.name + '/' + file, real_target + paired_file)
+                try:
+                    if not test_run and paired_file:
+                        shutil.copy(self.local_temp.name + '/' + file, real_target + metafile)
+                        shutil.copy(self.local_temp.name + '/' + file, real_target + paired_file)
+                except NameError:
+                    pass
 
     def _copy_meta_file(self, story_meta, out_dir=None):
         if not out_dir:
@@ -51,18 +55,26 @@ class RelocateInformation(object):
         # Copy meta file with proper renaming
         source = pl.Path(self.story_directory.name) / 'meta.txt'
         target = out_dir / (story_meta['slug'] + ".meta")
-        if os.path.exists(target):
-            os.remove(target)
-        shutil.copy(source, target)
+        try:
+            if not test_run:
+                if os.path.exists(target):
+                    os.remove(target)
+                shutil.copy(source, target)
+        except NameError:
+            pass
 
 
 
 def create_empty_dirpath(path):
     """Create an empty directory and make any intermediate directories."""
-    if os.path.exists(path):
-        if not os.path.isdir(path):
-            raise ValueError(f"Specified path, {path}, is not a directory in call to create_empty_dirpath.")
-        shutil.rmtree(path)
-        os.mkdir(path)
-    else:
-        os.makedirs(os.path.dirname(path), exist_ok=True)
+    try:
+        if not test_run:
+            if os.path.exists(path):
+                if not os.path.isdir(path):
+                    raise ValueError(f"Specified path, {path}, is not a directory in call to create_empty_dirpath.")
+                shutil.rmtree(path)
+                os.mkdir(path)
+            else:
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+    except NameError:
+        pass
