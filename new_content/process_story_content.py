@@ -9,6 +9,7 @@ from mako.template import Template
 from new_content import validate_shortcodes as vs
 from mako.lookup import TemplateLookup
 from mako.runtime import Context
+from config_private import test_run
 
 
 class ProcessStoryContent(object):
@@ -98,9 +99,13 @@ class ProcessStoryContent(object):
         val_sc.clean_docx()           # Already duplicated in nikola command
         val_sc.process_shortcodes()
         target = self.docx_directory + story_meta['slug'] + ".docx"
-        if os.path.exists(target):
-            os.remove(target)
-        shutil.copy(source, target)
+        try:
+            if not test_run:
+                if os.path.exists(target):
+                    os.remove(target)
+                shutil.copy(source, target)
+        except NameError:
+            pass
         self._copy_meta_file(story_meta)
 
     def _copy_meta_file(self, story_meta, out_dir=None):
@@ -109,9 +114,13 @@ class ProcessStoryContent(object):
         # Copy meta file with proper renaming
         source = pl.Path(self.story_directory.name) / 'meta.txt'
         target = out_dir / (story_meta['slug'] + ".meta")
-        if os.path.exists(target):
-            os.remove(target)
-        shutil.copy(source, target)
+        try:
+            if not test_run:
+                if os.path.exists(target):
+                    os.remove(target)
+                shutil.copy(source, target)
+        except NameError:
+            pass
 
     def process_template(self, story_meta, file):
         template_name = story_meta['template_mako']
@@ -140,10 +149,14 @@ class ProcessStoryContent(object):
         results = template.render(**context)
         results = results.replace('\n\n', '\n')     # somehow, md ignores html following two blank lines.
         out_dir = pl.Path(self.sst_directory + story_meta['path'] + '/')
-        os.makedirs(out_dir, exist_ok=True)
-        with open(out_dir / (story_meta['slug'] + '.md'), 'w') as outfile:
-            outfile.write(results)
-            outfile.close()
+        try:
+            if not test_run:
+                os.makedirs(out_dir, exist_ok=True)
+                with open(out_dir / (story_meta['slug'] + '.md'), 'w') as outfile:
+                    outfile.write(results)
+                    outfile.close()
+        except NameError:
+            pass
 
         self._copy_meta_file(story_meta, out_dir=out_dir)
 
@@ -153,17 +166,11 @@ class ProcessStoryContent(object):
             ndx = 1
         image_path = self.sst_directory + path[ndx:]
         source = pl.Path(self.story_directory.name) / file
-        # Note: Is there a reason this code should be here.  It's disabled here
-        # as a test to see if there are unexpected (forgotten) issues.
-        # if self.first_photo:
-        #     self.first_photo = False
-        #     if os.path.exists(image_path):
-        #         if os.path.isdir(image_path):
-        #             shutil.rmtree(image_path)
-        #         else:
-        #             os.remove(image_path)
-        #     os.makedirs(os.path.dirname(image_path))
-        shutil.copy(source, image_path)
+        try:
+            if not test_run:
+                shutil.copy(source, image_path)
+        except NameError:
+            pass
 
     def process_gallery(self, path_to_gallery):
         photo_files = os.listdir(path_to_gallery)
@@ -188,11 +195,15 @@ class ProcessStoryContent(object):
                     self.logger.make_error_entry(f"Missing gallery path.  Gallery meta: {gallery_meta}")
                     raise ValueError(f"Missing gallery path")
                 gal_path = self.sst_directory + gallery_path[1:]
-                create_empty_dirpath(gal_path)
-                shutil.copy(resolved_gallery_path / 'metadata.yml', gal_path)
-                for doc in gallery_meta:
-                    if doc:
-                        shutil.copy(resolved_gallery_path / doc['name'], gal_path + doc['name'])
+                try:
+                    if not test_run:
+                        create_empty_dirpath(gal_path)
+                        shutil.copy(resolved_gallery_path / 'metadata.yml', gal_path)
+                        for doc in gallery_meta:
+                            if doc:
+                                shutil.copy(resolved_gallery_path / doc['name'], gal_path + doc['name'])
+                except NameError:
+                    pass
         else:
             self.logger.make_error_entry(f"No metadata.yml file in {path_to_gallery}")
             raise ValueError(f"No metadata.yml file in {path_to_gallery}")
@@ -200,10 +211,14 @@ class ProcessStoryContent(object):
 
 def create_empty_dirpath(path):
     """Create an empty directory and make any intermediate directories."""
-    if os.path.exists(path):
-        if not os.path.isdir(path):
-            raise ValueError(f"Specified path, {path}, is not a directory in call to create_empty_dirpath.")
-        shutil.rmtree(path)
-        os.mkdir(path)
-    else:
-        os.makedirs(os.path.dirname(path), exist_ok=True)
+    try:
+        if not test_run:
+            if os.path.exists(path):
+                if not os.path.isdir(path):
+                    raise ValueError(f"Specified path, {path}, is not a directory in call to create_empty_dirpath.")
+                shutil.rmtree(path)
+                os.mkdir(path)
+            else:
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+    except NameError:
+        pass

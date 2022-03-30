@@ -36,8 +36,12 @@ class SystemManager(object):
         dirs = cmd_proc.ManageFolders(self.config, self.logger, self.system_users, self.commands_prefix)
         dirs.process_commands_top()
         users_wanting_logs = dirs.get_log_requests()
-        if users_wanting_logs:
-            self._email_logs(users_wanting_logs)
+        try:
+            if pvt.email_logs:
+                if users_wanting_logs:
+                    self._email_logs(users_wanting_logs)
+        except NameError:
+            pass
 
     def _email_logs(self, users):
         system_users_wanting_logs = []
