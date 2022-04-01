@@ -19,6 +19,7 @@ import tempfile as tf
 from system_control import system_manager as sm
 import yaml
 from new_content import validate_shortcodes as vs
+import system_control.manage_google_drive as mgd
 
 
 # RClone config file in /home/don/.config/rclone/rclone.conf
@@ -43,8 +44,8 @@ def driver():
         do_testing = True
 
     if do_testing:
-        prototyping = False
-        sst_management = True
+        prototyping = True
+        sst_management = False
         build_user_list = False
         build_staff_list = False
         build_horizon_list = False
@@ -148,12 +149,24 @@ def driver():
             summary_logger.make_error_entry('build_users_csv failed with exception: {}'.format(e.args))
 
     if prototyping:
+        """Download and unzip a backup file."""
+        logger = OvernightLogger('prototyping', logs_directory)
+        target_directory = temp_directory + 'worktemp/'
+        manage_drive = mgd.ManageGoogleDrive()
+        source_dir = "SSTmanagement/Backups/"
+        file_to_download = "galleries-mar-27-2022.zip"
+
+        manage_drive.download_file(logger, source_dir, file_to_download, target_directory)
+        foo = 3
+
+    if False and prototyping:
+        """Modify meta_paths in directory containing possibly recursive structure of files. """
         logger = OvernightLogger('prototyping', logs_directory)
         drive_dir_to_download = config['drive paths']['driveAdmin'] + config['drive paths']['driveMinutes']
         target_directory = work_directory + 'worktemp/'
         test_dir = temp_directory + 'fix_meta_paths/'
         path_element_to_find = 'pages/aa-activities-index'
-        path_element_to_replace= 'pages'
+        path_element_to_replace = 'pages'
         try:
             for root, dirs, files in os.walk(test_dir):
                 print(f"{root}")
@@ -194,6 +207,7 @@ def driver():
             traceback.print_exc()
 
     if False and prototyping:
+        """Test validate shortcodes."""
         logger = OvernightLogger('prototyping', logs_directory)
         db_name = 'sst'
         drive_dir_to_download = config['drive paths']['driveAdmin'] + config['drive paths']['driveMinutes']
@@ -212,6 +226,7 @@ def driver():
             traceback.print_exc()
 
     if False and prototyping:
+        """Provide support for flexbox."""
         logger = OvernightLogger('prototyping', logs_directory)
         db_name = 'sst'
         drive_dir_to_download = config['drive paths']['driveAdmin'] + config['drive paths']['driveMinutes']
@@ -338,7 +353,7 @@ def driver():
                     return start_str
 
             pbs = SupportFlexbox()
-            a_test_string = b_test
+            a_test_string = ''
             # a_test_string += 'Now is the time '
             # a_test_string += ' {{% box   name="foo" \n direction="row" %}}'
             # a_test_string += ' {{% cvb   name="foo"  direction="row" %}}'
@@ -366,40 +381,6 @@ def driver():
     summary_logger.make_info_entry('Nightly Run Completed')
     summary_logger.close_logger()
 
-
-b_test = """<p><strong>{{% meta_info info_type=”title” %}}Musings from the Sunnyside Library{{%/ meta_info %}}</strong></p>
-<p>{{% meta_info info_type=”byline” %}}By Barbara Boothe{{% meta_info %}}</p>
-<p>Well, January brought us some significant snow and really cold temperatures! Let’s hope that February is a bit more moderate!</p>
-<p>{{% singlepic image="/images/Eiland-Center-Library/Book-Lr.jpg" width="400px" height="300px" alignment="center" caption="" title="" has_borders="False" %}}</p>
-<p>{{% box name="foo" direction="row" style="display:box"  foo="bar" baz="bat" %}}</p>
-<p><strong>Eiland Center Library</strong></p>
-<p>We have been busy cataloging the books at the Eiland Center Library in January. We hope to finish that project soon so Robert can begin the renovations of the two rooms. Two rooms, you say?</p>
-<p>{{% box name="bar" direction="column" %}}</p>
-<p>Well, if you have not been to the Eiland Center Library, I would encourage you to make a trip there. That way you will be able to see how it all transforms!</p>
-<p>{{% /box name="bar" %}}</p>
-<p>{{% box name="baz" direction="row-reverse" %}}</p>
-<p>Barbara Boothe is interviewing the Assisted Living residents to get an idea of how best to make the library supportive of their needs and desires.</p>
-<p>{{% /box name="baz" %}}</p>
-<p><strong>Highlands Library</strong></p>
-<p>We have some new signage coming. We also have a magnifier reader on its way. If you have trouble reading a magazine, newspaper, a regular print book, or the instructions on your pill bottle, we encourage you to check it out. Watch for more information about this new addition to the library.</p>
-<p><strong>New Books </strong></p>
-<p>New books are on the counter—<em><strong>The Judge’s List</strong></em> by John Grisham; <strong>The Thursday Murder Club</strong> and <strong>The Man Who Died Twice</strong> by Richard Orman; and <strong>Susie, Linda, Nina, and Cokie</strong> by Lisa Napoli.</p>
-<p>{{% /box name="foo" %}}</p>
-<p><strong>Book Clubs</strong></p>
-<p><strong>Sunny Readers</strong></p>
-<p>February 9, 3:00 p.m., 4263 Grattan Price Dr.</p>
-<p><em>My Dear Hamilton</em> by Eliza Schuyler Hamilton</p>
-<p><strong>Shenandoah Readers</strong></p>
-<p>February 22, 10:00 a.m., Shenandoah Room, Highlands</p>
-<p><em>Becoming</em> by Michelle Obama</p>
-<p>March 22, 10:00 a.m., Shenandoah Room, Highlands</p>
-<p><em>Cairnaerie</em> by MKB Graham</p>
-<p><strong>Who Dun It Club</strong></p>
-<p>March 2, 1:30 p.m., Sunnyside Room</p>
-<p><em>Dolphin Junction</em> by Mick Herron</p>
-<p>April 6, 1:30 p.m., Sunnyside Room</p>
-<p><em>Daughter of Time</em> by Josephine Tey</p>
-"""
 
 if __name__ == '__main__':
     driver()
