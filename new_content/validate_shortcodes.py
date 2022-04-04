@@ -142,7 +142,7 @@ class ValidateShortcodes(object):
                     if not attr_val.startswith('/images') or attr_val.split('.')[-1] not in ['jpg', 'jpeg', 'tif']:
                         self.logger.make_error_entry(f"Image path: {attr_val} appears to be invalid.")
                 elif key == 'alignment':
-                    if attr_val and attr_val not in ['right', 'center', 'left']:
+                    if attr_val and attr_val not in ['right', 'center', 'left', 'float-left', 'float-right']:
                         self.logger.make_error_entry(f"Invalid alignment value {attr_val} in {sc_name}.")
             for required_attr in attrs_required:
                 if required_attr not in attr_dict.keys():
