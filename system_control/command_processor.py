@@ -79,12 +79,13 @@ class ManageFolders(object):
         # self.current_folder is the full path to the folder being processed (leaf node, a.k.a. folder)
         # folder is used as the name of the specific folder (leaf node) being processed.
         self.current_folder = self.top_folder
-        self.valid_command_sets = ["top", "content", "story", "transfer_files"]
+        self.valid_command_sets = ["top", "content", "story", "transfer_files", "update_pages"]
         self.valid_commands = \
             {"top": ["identity", "change_folder", "process_single_folder"],
              "content": ["identity", "process_single_folder", "all"],
              "story": ["identity", "story"],
-             "transfer_files": ["identity", "move_files"]
+             "transfer_files": ["identity", "move_files"],
+             "update_pages": ["identity", "process_pages"],
              }
         self.command_subcommands = \
             {("top", "identity"): self._command_identity,
@@ -97,7 +98,9 @@ class ManageFolders(object):
              ("story", "identity"): self._command_identity,
              ("story", "story"): self._command_process_story,
              ("transfer_files", "identity"): self._command_identity,
-             ("transfer_files", "move_files"): self._command_transfer_files
+             ("transfer_files", "move_files"): self._command_transfer_files,
+             ("update_pages", "process_pages"): self._command_update_pages,
+             ("update_pages", "identity"): self._command_identity,
              }
         # Note:  this is a potential bug if the same subcommand exists in two different commands with different attrs
         self.subcommand_definitions = \
@@ -183,12 +186,7 @@ class ManageFolders(object):
 
     def get_file_names(self, folder):
         """Retrieve list of names of contained files in specific folder from drive."""
-        file_list = self.manage_drive.directory_list_files(self.logger, folder).decode('utf-8')
-        files = []
-        for line in file_list.split('\n'):
-            elements = line.split()
-            if type(elements) is list and len(elements) > 0:
-                files.append(elements[-1])
+        files = self.manage_drive.directory_list_files(self.logger, folder)
         return files
 
     def get_commands(self, folder):
@@ -256,7 +254,7 @@ class ManageFolders(object):
             command_name = command['command']
             key = (command_set, command_name)
             if key not in self.command_subcommands:
-                self.logger(f"Command: {command} not valid for command_set: {command_set} in folder: {folder}")
+                self.logger.make_error_entry(f"Command: {command} not valid for command_set: {command_set} in folder: {folder}")
                 raise ValueError(f"Invalid command: {command} - not supported")
             cmd = self.command_subcommands[key]
             cmd(command)
@@ -391,8 +389,14 @@ class ManageFolders(object):
         self.current_folder = self.top_folder
         print(f"Command: {command} called - top folder now: {self.top_folder}")
 
-    def _command_xxx(self, command):
+    def _command_update_pages(self, command):
+        """Perform file management actions in pages directory."""
         print(f"Command: {command} called")
+        file_names = self.get_file_names(self.current_folder)
+        relocator = RI(self.logger, self.current_folder, self.config)
+        for file in file_names:
+            if file != 'meta.txt' and file != 'commands.txt':
+                relocator.process_page_file_actions(file)
         pass
 
     def _command_xxx(self, command):
