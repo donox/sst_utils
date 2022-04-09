@@ -43,8 +43,7 @@ class SystemUser(object):
                     user_data[user] = doc
             return user_data
         except Exception as e:
-            print(e)
-            traceback.print_exc()
+            self.logger.make_error_entry(f"Fail loading config_users with error: {e.args}")
 
     def get_users(self):
         return self.user_data
