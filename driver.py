@@ -33,31 +33,33 @@ def driver():
     except:
         raise SystemError("No USER Environment Variable specified")
 
-    # This script is intended to run daily, so there is a notion of 'testing' which is applicable
-    # during development or other non-automated execution.  Automated execution requires creating
-    # a Linux timer driven script.
-    do_testing = True
-    # Assume that any run between 1am and 4am is for production
-    start_notest = dt.time(1, 0)  # but not if between 1am and 4am
-    end_notest = dt.time(3, 0)
-    if start_notest < dt.datetime.now().time() < end_notest:
-        do_testing = True
-
-    if do_testing:
-        prototyping = True
-        sst_management = False
-        build_user_list = False
-        build_staff_list = False
-        build_horizon_list = False
-        create_combined_login = False
-
-    else:           # Intended for cron job run nightly
-        prototyping = False
-        sst_management = False
-        build_user_list = False
-        build_staff_list = False
-        build_horizon_list = False
-        create_combined_login = False
+    # NOTE:  Variables are now set in config_private to allow them to be changed by the user without
+    #        causing clashes when updating code from github.
+    # # This script is intended to run daily, so there is a notion of 'testing' which is applicable
+    # # during development or other non-automated execution.  Automated execution requires creating
+    # # a Linux timer driven script.
+    # do_testing = True
+    # # Assume that any run between 1am and 4am is for production
+    # start_notest = dt.time(1, 0)  # but not if between 1am and 4am
+    # end_notest = dt.time(3, 0)
+    # if start_notest < dt.datetime.now().time() < end_notest:
+    #     do_testing = True
+    #
+    # if do_testing:
+    #     prototyping = False
+    #     sst_management = True
+    #     build_user_list = False
+    #     build_staff_list = False
+    #     build_horizon_list = False
+    #     create_combined_login = False
+    #
+    # else:           # Intended for cron job run nightly
+    #     prototyping = False
+    #     sst_management = False
+    #     build_user_list = False
+    #     build_staff_list = False
+    #     build_horizon_list = False
+    #     create_combined_login = False
 
     config = configparser.ConfigParser()
 
