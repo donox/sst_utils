@@ -14,7 +14,7 @@ from utilities.run_log_command import run_shell_command, OvernightLogger
 
 from system_control.manage_google_drive import ManageGoogleDrive
 from manage_users.create_resident_list import CreateUserList
-import config_private as private
+import config_private as pvt
 import tempfile as tf
 from system_control import system_manager as sm
 import yaml
@@ -77,21 +77,20 @@ def driver():
     sst_support_directory = config[sst_user]['supportDirectory']
     smtp_server = config['email']['smtpServer']
     smtp_port = config['email']['smtpPort']
-    email_username = private.username
-    email_password = private.password
+    email_username = pvt.username
+    email_password = pvt.password
 
     summary_logger = OvernightLogger('summary_log', logs_directory)  # Logger - see use below
-    if do_testing:
-        summary_logger.make_info_entry('Start Testing Run')
-    else:
-        summary_logger.make_info_entry('Start Nightly Run')
+    summary_logger.make_info_entry(f"Begin sst_utils run ")
 
-    if sst_management:
+    if pvt.sst_management:
+        summary_logger.make_info_entry(f"Begin command processing")
         # commands.txt user prefix set with: os.environ["USER_PREFIX"]
         sys_mgr = sm.SystemManager()
         sys_mgr.run_command_processor()
 
-    if build_user_list or build_staff_list or build_horizon_list:
+    if pvt.build_user_list or pvt.build_staff_list or pvt.build_horizon_list:
+        summary_logger.make_info_entry(f"Begin login list processing")
         # Copy Sunnyside Resident Phone Directory from google drive (SSTmanagement/UserData) to
         # a temporary directory.  Parse and convert the file to build user login csv file for residents
         try:
@@ -108,11 +107,11 @@ def driver():
             os.mkdir(temps)
 
             res_list_processor = CreateUserList(sst_logger, temps, google_drive_dir)
-            if build_user_list:
+            if pvt.build_user_list:
                 res_list_processor.process_resident_directory(resident_phone_list)
-            if build_staff_list:
+            if pvt.build_staff_list:
                 res_list_processor.process_staff_directory(staff_phone_list)
-            if build_horizon_list:
+            if pvt.build_horizon_list:
                 res_list_processor.process_horizon_directory(horizon_club_list)
 
             # Log completion
@@ -122,9 +121,10 @@ def driver():
         except Exception as e:
             summary_logger.make_error_entry('build_user_list failed with exception: {}'.format(e.args))
 
-    if create_combined_login:
+    if pvt.create_combined_login:
         # Copy current login lists from Google Drive, combine them and move to sst/support/users.csv
         try:
+            summary_logger.make_info_entry(f"Begin create combined login")
             sst_logger = OvernightLogger('build_users_csv', logs_directory)
             sst_logger.make_info_entry('Start User Login Creation')
 
@@ -150,8 +150,9 @@ def driver():
         except Exception as e:
             summary_logger.make_error_entry('build_users_csv failed with exception: {}'.format(e.args))
 
-    if prototyping:
+    if pvt.prototyping:
         """Download and unzip a backup file."""
+        summary_logger.make_info_entry(f"Begin prototyping run")
         logger = OvernightLogger('prototyping', logs_directory)
         target_directory = temp_directory + 'worktemp/'
         manage_drive = mgd.ManageGoogleDrive()
@@ -161,7 +162,7 @@ def driver():
         manage_drive.download_file(logger, source_dir, file_to_download, target_directory)
         foo = 3
 
-    if False and prototyping:
+    if False and pvt.prototyping:
         """Modify meta_paths in directory containing possibly recursive structure of files. """
         logger = OvernightLogger('prototyping', logs_directory)
         drive_dir_to_download = config['drive paths']['driveAdmin'] + config['drive paths']['driveMinutes']
@@ -208,7 +209,7 @@ def driver():
             print(e)
             traceback.print_exc()
 
-    if False and prototyping:
+    if False and pvt.prototyping:
         """Test validate shortcodes."""
         logger = OvernightLogger('prototyping', logs_directory)
         db_name = 'sst'
@@ -227,7 +228,7 @@ def driver():
             print(e)
             traceback.print_exc()
 
-    if False and prototyping:
+    if False and pvt.prototyping:
         """Provide support for flexbox."""
         logger = OvernightLogger('prototyping', logs_directory)
         db_name = 'sst'
@@ -380,7 +381,7 @@ def driver():
 
         logger.close_logger()
 
-    summary_logger.make_info_entry('Nightly Run Completed')
+    summary_logger.make_info_entry('sst_utils Run Completed')
     summary_logger.close_logger()
 
 
