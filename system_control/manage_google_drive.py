@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from utilities.run_log_command import run_shell_command
 import shutil
 import os

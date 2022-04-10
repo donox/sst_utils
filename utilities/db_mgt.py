@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import mysql
 from mysql.connector import errorcode
 

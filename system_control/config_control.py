@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import config_private as private
 import configparser
 import os

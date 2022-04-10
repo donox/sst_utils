@@ -1,4 +1,4 @@
-import sys
+#!/usr/bin/env python3
 import os
 import shutil
 import yaml
@@ -99,10 +99,12 @@ class RelocateInformation(object):
         file_base = system_file_path + file_name
         found = False
         if os.path.exists(file_base + '.md'):
-            os.remove(file_base + '.md')
+            if not test_run:
+                os.remove(file_base + '.md')
             found = True
         if os.path.exists(file_base + '.meta'):
-            os.remove(file_base + '.meta')
+            if not test_run:
+                os.remove(file_base + '.meta')
         if found:
             self.logger.make_info_entry(f"Page {url} removed.")
         else:
