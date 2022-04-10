@@ -47,10 +47,6 @@ def driver():
     gallery_directory = config[sst_user]['galleryDirectory']
     sst_directory = config[sst_user]['SSTDirectory']
     sst_support_directory = config[sst_user]['supportDirectory']
-    smtp_server = config['email']['smtpServer']
-    smtp_port = config['email']['smtpPort']
-    email_username = pvt.username
-    email_password = pvt.password
 
     summary_logger = OvernightLogger('sst_utils_log', logs_directory)  # Logger - see use below
     summary_logger.make_info_entry(f"Begin sst_utils run ")

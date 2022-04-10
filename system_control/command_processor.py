@@ -10,6 +10,7 @@ from yaml.scanner import ScannerError
 from new_content.process_story_content import ProcessStoryContent as PSC
 from new_content.relocate_info import RelocateInformation as RI
 from system_control import manage_google_drive as mgd
+from system_control.exceptions import SstCommandDefinitionException as CDEx
 
 
 class SystemUser(object):
@@ -136,27 +137,27 @@ class ManageFolders(object):
                         el = line_parts[0]
                         if len(line_parts) < 2:
                             err(f"Command_set does not contain a specific command_set ")
-                            raise ValueError()
+                            raise CDEx(f"No command_set found")
                         el2 = line_parts[1].strip().lower()
                         if not curr_cmd:  # Validate command_set
                             if not cmd_set:
                                 if el != 'command_set':
                                     err(f"'Command_set' not found in file.")
-                                    raise ValueError()
+                                    raise CDEx("Missing Command Set")
                                 if el2 not in self.valid_command_sets:
                                     err(f"{el2} in line {line_no}' is not a valid command_set")
-                                    raise ValueError()
+                                    raise CDEx(f"Unrecognized Command Set")
                                 cmd_set = el2
                             else:  # must be a command appropriate for the command_set
                                 if el != 'command':
                                     err(f"{el} is not a part of command {cmd_set}")
-                                    raise ValueError()
+                                    raise CDEx(f"Invalid command for this command set")
                                 curr_cmd = el2
                         else:
                             if not self._check_function_in_subcommand_definitions(curr_cmd, el):
                                 err(f"{el} is not valid in this command: {curr_cmd}")
-                                raise ValueError()
-        except ValueError as e:
+                                raise CDEx(f"Invalid subcommand")
+        except CDEx as e:
             cmd_file.close()
             return False
         cmd_file.close()
@@ -207,7 +208,7 @@ class ManageFolders(object):
                 bar = 3
             if not self.validate_command_file(self.local_temp.name, filename):
                 self.logger.make_error_entry(f"Invalid command file in folder: {folder}")
-                raise ValueError("Invalid Command File")
+                raise CDEx("Invalid Command File")
             with open(pl.Path(self.local_temp.name) / filename, 'r', encoding='utf-8') as fd:
                 res = YAML.safe_load_all(fd)
                 docs = [doc for doc in res]
@@ -245,7 +246,7 @@ class ManageFolders(object):
         command_set = cmds[0]['command_set'].lower()
         if command_set not in self.valid_command_sets:
             self.logger(f"Invalid command set: {command_set} for folder: {folder}")
-            raise ValueError(f"Invalid command set: {command_set}")
+            raise CDEx(f"Invalid command set: {command_set}")
         valid_commands = self.valid_commands[command_set]
         for command in self._generate_commands(cmds[1:], valid_commands):
             print(f"Command {command}  in folder {folder} to be executed.")  # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -254,7 +255,7 @@ class ManageFolders(object):
             key = (command_set, command_name)
             if key not in self.command_subcommands:
                 self.logger.make_error_entry(f"Command: {command} not valid for command_set: {command_set} in folder: {folder}")
-                raise ValueError(f"Invalid command: {command} - not supported")
+                raise CDEx(f"Invalid command: {command} - not supported")
             cmd = self.command_subcommands[key]
             cmd(command)
 
@@ -283,7 +284,7 @@ class ManageFolders(object):
         cmds = self.get_commands(folder)
         if not cmds:
             self.logger.make_error_entry(f"There is no commands.txt file in {folder}")
-            raise ValueError("Missing commands.txt")
+            raise CDEx("Missing commands.txt")
         try:
             _ = cmds[0]["command_set"]
         except KeyError as e:
@@ -294,21 +295,17 @@ class ManageFolders(object):
     def _generate_commands(self, command_list, allowable_commands):
         """Create generator for list of allowable commands."""
         for command_dict in command_list:
-            try:
-                cmd = command_dict["command"].lower()
-                if cmd not in allowable_commands:
-                    self.logger.make_error_entry(f"Invalid  command: {cmd} not in {allowable_commands}")
-                    raise ValueError(f"Invalid command: {cmd}")
-                yield command_dict
-            except Exception as e:
-                self.logger.make_error_entry(f"Invalid or missing command: {command_dict}")
-                raise ValueError(f"Invalid command dictionary: {command_dict}")
+            cmd = command_dict["command"].lower()
+            if cmd not in allowable_commands:
+                self.logger.make_error_entry(f"Invalid  command: {cmd} not in {allowable_commands}")
+                raise CDEx(f"Invalid command: {cmd}")
+            yield command_dict
 
     def _get_command_attribute(self, attribute, command, default=None):
         try:
             res = command[attribute]
             return res
-        except Exception as e:
+        except KeyError as e:
             if default:
                 return default
             self.logger.make_error_entry(f"Expected {attribute} in command: {command}")
@@ -352,11 +349,8 @@ class ManageFolders(object):
             else:
                 self.logger.make_error_entry(f"Unrecognized folder_type: {folder_type} for folder: {folder}")
                 self.current_folder = current_folder
-                raise ValueError(f"Invalid folder_type: {folder_type}")
+                raise CDEx(f"Invalid folder_type: {folder_type}")
             self.current_folder = current_folder
-            pass
-        except Exception as e:
-            raise e
         finally:
             self.current_folder = current_folder
 
