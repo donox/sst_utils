@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import os
 
 from system_control import command_processor as cmd_proc

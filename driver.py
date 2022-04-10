@@ -1,15 +1,10 @@
 #!/usr/bin/env python3
-
 import configparser
-import csv
 import datetime as dt
 import os
-import re
 import shutil
 import traceback
-import yaml as YAML
 import pathlib as pl
-from xml.etree import ElementTree as ET
 from utilities.run_log_command import run_shell_command, OvernightLogger
 
 from system_control.manage_google_drive import ManageGoogleDrive
@@ -18,7 +13,6 @@ import config_private as pvt
 import tempfile as tf
 from system_control import system_manager as sm
 import yaml
-from new_content import validate_shortcodes as vs
 import system_control.manage_google_drive as mgd
 
 

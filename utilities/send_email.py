@@ -1,4 +1,4 @@
-
+#!/usr/bin/env python3
 import smtplib
 import ssl
 from email.message import EmailMessage
