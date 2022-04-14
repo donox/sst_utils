@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 import pathlib as pl
 import tempfile as tf
-import traceback
 import os
 import shutil
 
 import yaml as YAML
 from yaml.scanner import ScannerError
 
+from config_private import test_run
 from new_content.process_story_content import ProcessStoryContent as PSC
 from new_content.relocate_info import RelocateInformation as RI
 from system_control import manage_google_drive as mgd
@@ -71,6 +71,8 @@ class ManageFolders(object):
         self.config = config
         self.logger = logger
         self.temp_dir = config.get_configuration_parameter('tempDirectory')
+        self.sst_directory = config.get_configuration_parameter('SSTDirectory')
+        self.support_directory = config.get_configuration_parameter('supportDirectory')
         # Note: local_temp is reused - it must be emptied before loading a new command file (get_commands)
         self.local_temp = tf.TemporaryDirectory(dir=self.temp_dir, prefix='cmd')
         self.users = users
@@ -80,12 +82,13 @@ class ManageFolders(object):
         # self.current_folder is the full path to the folder being processed (leaf node, a.k.a. folder)
         # folder is used as the name of the specific folder (leaf node) being processed.
         self.current_folder = self.top_folder
-        self.valid_command_sets = ["top", "content", "story", "transfer_files", "update_pages"]
+        self.valid_command_sets = ["top", "content", "story", "transfer_files", "transfer_to_support", "update_pages"]
         self.valid_commands = \
             {"top": ["identity", "change_folder", "process_single_folder"],
              "content": ["identity", "process_single_folder", "all"],
              "story": ["identity", "story"],
              "transfer_files": ["identity", "move_files"],
+             "transfer_to_support": ["identity", "move_files"],
              "update_pages": ["identity", "process_pages"],
              }
         self.command_subcommands = \
@@ -100,6 +103,8 @@ class ManageFolders(object):
              ("story", "story"): self._command_process_story,
              ("transfer_files", "identity"): self._command_identity,
              ("transfer_files", "move_files"): self._command_transfer_files,
+             ("transfer_to_support", "identity"): self._command_identity,
+             ("transfer_to_support", "move_files"): self._command_transfer_support_files,
              ("update_pages", "process_pages"): self._command_update_pages,
              ("update_pages", "identity"): self._command_identity,
              }
@@ -372,9 +377,26 @@ class ManageFolders(object):
         Files are transferred without checking or change. This presumes they
         are suitable for nikola processing and have been updated on Drive."""
         relocator = RI(self.logger, self.current_folder, self.config)
-        print(f"Command: {command} called")
         target_dir = self._get_command_attribute("target_directory", command)
         relocator.move_folder_of_pagefiles(target_dir)
+
+    def _command_transfer_support_files(self, command):
+        """Transfer files to Support directory for further processing
+
+        Files are transferred without checking or change. They will be processed
+        by additional Nikola commands."""
+        print(f"Command: {command} called")
+        target_dir = self._get_command_attribute("target_directory", command)
+        self.manage_drive.download_directory(self.logger, self.current_folder, self.local_temp.name)
+        all_files = os.listdir(self.local_temp.name)
+        real_target = (self.support_directory + target_dir).replace('//', '/')
+        for file in all_files:
+            try:
+                if not test_run and file != 'commands.txt':
+                    shutil.copy(self.local_temp.name + '/' + file, real_target + file)
+            except NameError:
+                pass
+
 
     def _command_change_folder(self, command):
         """Modify top folder."""
