@@ -390,6 +390,8 @@ class ManageFolders(object):
         self.manage_drive.download_directory(self.logger, self.current_folder, self.local_temp.name)
         all_files = os.listdir(self.local_temp.name)
         real_target = (self.support_directory + target_dir).replace('//', '/')
+        if not os.path.isdir(real_target):
+            os.mkdir(real_target)
         for file in all_files:
             try:
                 if not test_run and file != 'commands.txt':
