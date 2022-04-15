@@ -143,7 +143,7 @@ class ProcessStoryContent(object):
         context["body"] = []
         for el in story_content[1:]:
             if el:
-                if 'photo_path' in el.keys():     # support pictures - such as in Sunnybear
+                if 'photo_path' in story_meta.keys():     # support pictures - such as in Sunnybear
                     el['picture'] = story_meta['photo_path'] + el['picture']
                 context["body"].append(el)
         results = template.render(**context)

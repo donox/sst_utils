@@ -1,5 +1,5 @@
 {{% meta_info info_type="title" %}}${head["title"]}{{% /meta_info %}}
-{{% meta_info info_type="title" %}}${head["byline"]}{{% /meta_info %}}
+{{% meta_info info_type="byline" %}}${head["byline"]}{{% /meta_info %}}
 <%
     container = ["src-flex-container", "src-flex-container-rev"]
     flip = 0
