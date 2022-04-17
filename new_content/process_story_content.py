@@ -10,6 +10,7 @@ from new_content import validate_shortcodes as vs
 from mako.lookup import TemplateLookup
 from mako.runtime import Context
 from config_private import test_run
+from system_control.exceptions import SstCommandDefinitionException as CDEx
 
 
 class ProcessStoryContent(object):
@@ -55,7 +56,8 @@ class ProcessStoryContent(object):
             ext = file_parts[-1].lower()
             if ext == 'docx':
                 if not has_meta:
-                    raise ValueError(f"Folder: {self.folder_path} has no file meta.txt")
+                    self.logger.make_error_entry(f"Folder: {self.folder_path} has no file meta.txt")
+                    raise CDEx(f"Folder: {self.folder_path} has no file meta.txt")
                 self.process_docx(story_meta, file)
             elif ext == 'jpg':
                 # if not has_photos:
@@ -64,11 +66,11 @@ class ProcessStoryContent(object):
                 try:
                     if 'photo_path' not in story_meta.keys():
                         self.logger.make_error_entry(f"There is no photo_path in meta.txt")
-                        raise ValueError(f"Missing photo_path")
+                        raise CDEx(f"Missing photo_path")
                     self.process_photo(story_meta['photo_path'], file)
                 except:
                     self.logger.make_error_entry("No path in photos.txt for photo: {file}")
-                    raise ValueError(f"No path in photos.txt for photo: {file}")
+                    raise CDEx(f"No path in photos.txt for photo: {file}")
 
             elif ext == 'txt':
                 if file == 'meta.txt' or file == 'photos.txt' or file == 'commands.txt':
@@ -77,17 +79,17 @@ class ProcessStoryContent(object):
                     template = story_meta['template_mako']
                     if "file" not in story_meta or file != story_meta["file"]:
                         self.logger.make_error_entry(f"Unrecognized text file {file} in {self.folder_path}")
-                        raise ValueError(f"Unrecognized text file {file} in {self.folder_path}")
+                        raise CDEx(f"Unrecognized text file {file} in {self.folder_path}")
                     self.process_template(story_meta, file)
                 else:
                     self.logger.make_error_entry(f"Unrecognized text file {file} in {self.folder_path}")
-                    raise ValueError(f"Unrecognized text file {file} in {self.folder_path}")
+                    raise CDEx(f"Unrecognized text file {file} in {self.folder_path}")
             elif ext == 'md':
                 self.logger.make_error_entry(f"{file} or type .md in {self.folder_path} not yet implemented.")
-                raise ValueError(f"{file} or type .md in {self.folder_path} not yet implemented.")
+                raise CDEx(f"{file} or type .md in {self.folder_path} not yet implemented.")
             else:
                 self.logger.make_error_entry(f"Unrecognized file type {ext} in {self.folder_path}")
-                raise ValueError(f"Unrecognized file type {ext} in {self.folder_path}")
+                raise CDEx(f"Unrecognized file type {ext} in {self.folder_path}")
         for dirname in self.galleries:
             # A directory represents a gallery and cannot be nested.
             self.process_gallery(pl.Path(self.story_directory.name) / dirname)
@@ -123,6 +125,7 @@ class ProcessStoryContent(object):
             pass
 
     def process_template(self, story_meta, file):
+        self.logger.make_info_entry(f"Start processing template on file: {file}")
         template_name = story_meta['template_mako']
         file_path = pl.Path(self.story_directory.name) / file
         with open(file_path) as stream:
@@ -132,7 +135,7 @@ class ProcessStoryContent(object):
                 stream.close()
             except yaml.YAMLError as exc:
                 self.logger.make_error_entry(f"YAML error encountered in {self.folder_path} with error {exc.args}")
-                raise exc
+                raise CDEx(f"YAML error {exc.args}")
         if not template_name.endswith('.mako'):
             filename = 'new_content/templates/' + template_name + '.mako'
         else:
@@ -182,7 +185,7 @@ class ProcessStoryContent(object):
                     gallery_meta = [x for x in yaml.safe_load_all(stream)]
                 except yaml.YAMLError as exc:
                     self.logger.make_error_entry(f"YAML error encountered in {path_to_gallery} with error {exc.args}")
-                    raise exc
+                    raise CDEx(f"YAML Error: {exc.args}")
                 # First - locate gallery path and gallery name
                 gallery_path = None
                 for doc in gallery_meta:
@@ -193,7 +196,7 @@ class ProcessStoryContent(object):
                             gallery_path = vals[keys.index('gallery path')]
                 if not gallery_path:
                     self.logger.make_error_entry(f"Missing gallery path.  Gallery meta: {gallery_meta}")
-                    raise ValueError(f"Missing gallery path")
+                    raise CDEx(f"Missing gallery path")
                 gal_path = self.sst_directory + gallery_path[1:]
                 try:
                     if not test_run:
@@ -206,7 +209,7 @@ class ProcessStoryContent(object):
                     pass
         else:
             self.logger.make_error_entry(f"No metadata.yml file in {path_to_gallery}")
-            raise ValueError(f"No metadata.yml file in {path_to_gallery}")
+            raise CDEx(f"No metadata.yml file in {path_to_gallery}")
 
 
 def create_empty_dirpath(path):
@@ -215,7 +218,7 @@ def create_empty_dirpath(path):
         if not test_run:
             if os.path.exists(path):
                 if not os.path.isdir(path):
-                    raise ValueError(f"Specified path, {path}, is not a directory in call to create_empty_dirpath.")
+                    raise CDEx(f"Specified path, {path}, is not a directory in call to create_empty_dirpath.")
                 shutil.rmtree(path)
                 os.mkdir(path)
             else:
