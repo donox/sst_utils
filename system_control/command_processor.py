@@ -7,7 +7,7 @@ import shutil
 import yaml as YAML
 from yaml.scanner import ScannerError
 
-from config_private import test_run
+import config_private as cp
 from new_content.process_story_content import ProcessStoryContent as PSC
 from new_content.relocate_info import RelocateInformation as RI
 from system_control import manage_google_drive as mgd
@@ -199,8 +199,13 @@ class ManageFolders(object):
         """Load commands.txt as yaml list of documents (dictionaries)."""
         try:
             filename = "commands.txt"
+            filepath = filename
             if folder == self.top_folder:
-                filename = self.command_prefix + filename
+                if self.command_prefix == 'use_config_private':         # Hack to support old still till all changed.
+                    filename = cp.command_file
+                    filepath = cp.command_path + filename
+                else:
+                    filename = self.command_prefix + filename
             # We must clear the temp directory before downloading - this soln is more general than needed
             # but works in all cases
             for root, dirs, files in os.walk(self.local_temp.name):
@@ -208,7 +213,7 @@ class ManageFolders(object):
                     os.unlink(os.path.join(root, f))
                 for d in dirs:
                     shutil.rmtree(os.path.join(root, d))
-            self.manage_drive.download_file(self.logger, self.current_folder, filename, self.local_temp.name)
+            self.manage_drive.download_file(self.logger, self.current_folder, filepath, self.local_temp.name)
             foo = os.listdir(self.local_temp.name)
             if 'commands.txt' not in foo and 'don_commands.txt' not in foo:
                 bar = 3
@@ -394,7 +399,7 @@ class ManageFolders(object):
             os.mkdir(real_target)
         for file in all_files:
             try:
-                if not test_run and file != 'commands.txt':
+                if not cp.test_run and file != 'commands.txt':
                     shutil.copy(self.local_temp.name + '/' + file, real_target + file)
             except NameError:
                 pass
