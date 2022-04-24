@@ -14,8 +14,7 @@ import tempfile as tf
 from system_control import system_manager as sm
 import yaml
 import system_control.manage_google_drive as mgd
-import scrapy
-from scrapy.crawler import CrawlerProcess
+
 from new_content.href_links_spider import HrefLinksSpider
 import json
 
@@ -119,59 +118,6 @@ def driver():
         """Scan for page urls."""
         summary_logger.make_info_entry(f"Begin prototyping run")
         target_directory = temp_directory + 'worktemp/'
-
-        # try:
-        #     scrapy_command = 'scrapy runspider /home/don/PycharmProjects/sst_utils/new_content/href_links_spider.py'
-        #     scrapy_command += ' -o ' + target_directory + 'links.jl'
-        #     run_shell_command(scrapy_command, summary_logger, outfile= target_directory + 'printout.txt')
-        # except Exception as e:
-        #     summary_logger.make_error_entry(f"Scrapy Fail: {e.args}")
-        #     raise e
-        with open(target_directory + 'links.jl', 'r') as link_set:
-            def find_url(url):
-                start = url.find('href="')
-                if start == -1:
-                    return url
-                else:
-                    end = url[start:].find('"')
-                    url_only = url[start:start+end]
-                    return url_only
-            elements = []
-            preamble_len = len("https://sunnyside-times.com")
-            for line in link_set.readlines():
-                elements.append(json.loads(line))
-            externs = []
-            forward_refs = dict()
-            back_refs = dict()
-            broken = []
-            for elem in elements:
-                if elem['external']:
-                    externs.append(elem)
-                else:
-                    res_link = elem['link']
-                    if not res_link:
-                        print(f"Null link on {elem['url']}")
-                    else:
-                        res_url = find_url(res_link)
-                        if res_url:
-                            if res_url.startswith('https:'):
-                                res_url = res_url[preamble_len:]
-                            res_page = elem['url']
-                            if res_page.startswith('https'):
-                                res_page = elem['url'][preamble_len:]
-                            if res_page and res_url:
-                                if res_page in forward_refs.keys():
-                                    forward_refs[res_page].append(res_url)
-                                else:
-                                    forward_refs[res_page] = [res_url]
-                                if res_url in back_refs.keys():
-                                    back_refs[res_url].append(res_page)
-                                else:
-                                    back_refs[res_url] = [res_page]
-                            else:
-                                print(f"BROKEN: page-{res_page}, url-{res_url}")
-                        else:
-                            bar = 3
 
         foo = 3
 
