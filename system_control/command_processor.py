@@ -203,7 +203,10 @@ class ManageFolders(object):
             if folder == self.top_folder:
                 if self.command_prefix == 'use_config_private':         # Hack to support old still till all changed.
                     filename = cp.command_file
-                    filepath = cp.command_path + filename
+                    if self.current_folder.endswith('/'):
+                        self.current_folder = self.current_folder + cp.command_path
+                    else:
+                        self.current_folder = self.current_folder + '/' + cp.command_path
                 else:
                     filename = self.command_prefix + filename
             # We must clear the temp directory before downloading - this soln is more general than needed
@@ -213,7 +216,7 @@ class ManageFolders(object):
                     os.unlink(os.path.join(root, f))
                 for d in dirs:
                     shutil.rmtree(os.path.join(root, d))
-            self.manage_drive.download_file(self.logger, self.current_folder, filepath, self.local_temp.name)
+            self.manage_drive.download_file(self.logger, self.current_folder, filename, self.local_temp.name)
             foo = os.listdir(self.local_temp.name)
             if 'commands.txt' not in foo and 'don_commands.txt' not in foo:
                 bar = 3
@@ -253,7 +256,7 @@ class ManageFolders(object):
 
     def process_commands(self, folder):
         """Open and initiate processing of a folder containing commands.txt"""
-        cmds = self._get_command_set( folder)
+        cmds = self._get_command_set(folder)
         command_set = cmds[0]['command_set'].lower()
         if command_set not in self.valid_command_sets:
             self.logger(f"Invalid command set: {command_set} for folder: {folder}")
