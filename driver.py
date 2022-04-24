@@ -15,7 +15,7 @@ from system_control import system_manager as sm
 import yaml
 import system_control.manage_google_drive as mgd
 
-from new_content.href_links_spider import HrefLinksSpider
+
 import json
 
 
