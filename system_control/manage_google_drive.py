@@ -85,7 +85,9 @@ class ManageGoogleDrive(object):
         try:
             download_files_cmd = self.cmd_download_file_or_directory.format(1, self.add_slash(source_dir) +
                                                                             file_to_download, target_dir)
-            run_shell_command(download_files_cmd, logger, outfile=file_to_download)
+            # Note:  this used to have outfile=file_to_download specified which was dumping a file
+            #  in the cwd or throwing an error if not possible.  Was there a real, intended use for that??
+            run_shell_command(download_files_cmd, logger)
         except Exception as e:
             logger.make_error_entry('Error downloading file  {}'.format(file_to_download))
             raise e
