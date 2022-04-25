@@ -108,7 +108,8 @@ class ProcessStoryContent(object):
                 shutil.copy(source, target)
         except NameError:
             pass
-        self._copy_meta_file(story_meta)
+        if not test_run:
+            self._copy_meta_file(story_meta)
 
     def _copy_meta_file(self, story_meta, out_dir=None):
         if not out_dir:
