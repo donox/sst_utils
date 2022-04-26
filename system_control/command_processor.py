@@ -217,9 +217,6 @@ class ManageFolders(object):
                 for d in dirs:
                     shutil.rmtree(os.path.join(root, d))
             self.manage_drive.download_file(self.logger, self.current_folder, filename, self.local_temp.name)
-            foo = os.listdir(self.local_temp.name)
-            if 'commands.txt' not in foo and 'don_commands.txt' not in foo:
-                bar = 3
             if not self.validate_command_file(self.local_temp.name, filename):
                 self.logger.make_error_entry(f"Invalid command file in folder: {folder}")
                 raise CDEx("Invalid Command File")
@@ -284,7 +281,7 @@ class ManageFolders(object):
         return res
 
     def _context_add(self, cmd, **kwargs):
-        self.context.append(cmd)  # TRYING TO ADD KWARG Users
+        self.context.append(cmd)
 
     def _context_remove(self):
         self.context.pop()
