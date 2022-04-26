@@ -203,6 +203,8 @@ class ProcessStoryContent(object):
                     if not test_run:
                         create_empty_dirpath(gal_path)
                         shutil.copy(resolved_gallery_path / 'metadata.yml', gal_path)
+                        if not gal_path.endswith('/'):
+                            gal_path += '/'
                         for doc in gallery_meta:
                             if doc:
                                 shutil.copy(resolved_gallery_path / doc['name'], gal_path + doc['name'])
@@ -223,6 +225,6 @@ def create_empty_dirpath(path):
                 shutil.rmtree(path)
                 os.mkdir(path)
             else:
-                os.makedirs(os.path.dirname(path), exist_ok=True)
+                os.makedirs(path, exist_ok=True)
     except NameError:
         pass
