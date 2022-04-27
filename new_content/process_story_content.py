@@ -185,42 +185,45 @@ class ProcessStoryContent(object):
             pass
 
     def process_gallery(self, path_to_gallery):
-        photo_files = os.listdir(path_to_gallery)
-        resolved_gallery_path = pl.Path(path_to_gallery)
-        if 'metadata.yml' in photo_files:
-            with open(resolved_gallery_path / 'metadata.yml') as stream:
-                try:
-                    # Note: yaml is small and we convert to list so it can be reused
-                    gallery_meta = [x for x in yaml.safe_load_all(stream)]
-                except yaml.YAMLError as exc:
-                    self.logger.make_error_entry(f"YAML error encountered in {path_to_gallery} with error {exc.args}")
-                    raise CDEx(f"YAML Error: {exc.args}")
-                # First - locate gallery path and gallery name
-                gallery_path = None
-                for doc in gallery_meta:
-                    if doc:
-                        keys = [key.lower() for key in doc.keys()]
-                        vals = list(doc.values())
-                        if 'gallery path' in keys:
-                            gallery_path = vals[keys.index('gallery path')]
-                if not gallery_path:
-                    self.logger.make_error_entry(f"Missing gallery path.  Gallery meta: {gallery_meta}")
-                    raise CDEx(f"Missing gallery path")
-                gal_path = self.sst_directory + gallery_path[1:]
-                try:
-                    if not test_run:
-                        create_empty_dirpath(gal_path)
-                        shutil.copy(resolved_gallery_path / 'metadata.yml', gal_path)
-                        if not gal_path.endswith('/'):
-                            gal_path += '/'
-                        for doc in gallery_meta:
-                            if doc:
-                                shutil.copy(resolved_gallery_path / doc['name'], gal_path + doc['name'])
-                except NameError:
-                    pass
-        else:
-            self.logger.make_error_entry(f"No metadata.yml file in {path_to_gallery}")
-            raise CDEx(f"No metadata.yml file in {path_to_gallery}")
+        if os.path.exists(path_to_gallery):     # can be empty if there was an ignore folder
+            photo_files = os.listdir(path_to_gallery)
+            resolved_gallery_path = pl.Path(path_to_gallery)
+            if 'metadata.yml' in photo_files:
+                with open(resolved_gallery_path / 'metadata.yml') as stream:
+                    try:
+                        # Note: yaml is small and we convert to list so it can be reused
+                        gallery_meta = [x for x in yaml.safe_load_all(stream)]
+                    except yaml.YAMLError as exc:
+                        self.logger.make_error_entry(f"YAML error encountered in {path_to_gallery} with error {exc.args}")
+                        raise CDEx(f"YAML Error: {exc.args}")
+                    # First - locate gallery path and gallery name
+                    gallery_path = None
+                    for doc in gallery_meta:
+                        if doc:
+                            keys = [key.lower() for key in doc.keys()]
+                            vals = list(doc.values())
+                            if 'gallery path' in keys:
+                                gallery_path = vals[keys.index('gallery path')]
+                    if not gallery_path:
+                        self.logger.make_error_entry(f"Missing gallery path.  Gallery meta: {gallery_meta}")
+                        raise CDEx(f"Missing gallery path")
+                    gal_path = self.sst_directory + gallery_path[1:]
+                    try:
+                        if not test_run:
+                            create_empty_dirpath(gal_path)
+                            shutil.copy(resolved_gallery_path / 'metadata.yml', gal_path)
+                            if not gal_path.endswith('/'):
+                                gal_path += '/'
+                            for doc in gallery_meta:
+                                if doc:
+                                    shutil.copy(resolved_gallery_path / doc['name'], gal_path + doc['name'])
+                    except NameError:
+                        pass
+                    except Exception as e:
+                        foo = 3
+            else:
+                self.logger.make_error_entry(f"No metadata.yml file in {path_to_gallery}")
+                raise CDEx(f"No metadata.yml file in {path_to_gallery}")
 
 
 def create_empty_dirpath(path):

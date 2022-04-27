@@ -32,11 +32,14 @@ class OvernightLogger(object):
         self.logger = None
 
 
-def run_shell_command(command_line, logger, outfile=False, result_as_string=False):
-    command_line_args = shlex.split(command_line)
+def run_shell_command(command_line, logger, outfile=False, result_as_string=False, ignore=None):
+    command_line_plus = command_line
+    if ignore:
+        command_line_plus += " --exclude=" + ignore
+    command_line_args = shlex.split(command_line_plus)
     cmd = command_line_args[0]
 
-    logger.make_info_entry('Subprocess: {}'.format(command_line))
+    logger.make_info_entry('Subprocess: {}'.format(command_line_plus))
 
     try:
         command_line_process = subprocess.Popen(
@@ -47,7 +50,7 @@ def run_shell_command(command_line, logger, outfile=False, result_as_string=Fals
 
         process_output, process_error = command_line_process.communicate()
         if process_error:
-            logger.make_error_entry(f"Error returned from subprocess with command line:\n\t\t{command_line}" +
+            logger.make_error_entry(f"Error returned from subprocess with command line:\n\t\t{command_line_plus}" +
                                     f"\n\nError:\n\t\t{process_error}")
         logger.make_info_entry(f"Command output (first 1000 chars):\n\n{process_output[:1000]}")
         if outfile:

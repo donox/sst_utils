@@ -76,7 +76,7 @@ class ManageGoogleDrive(object):
         """
         try:
             download_files_cmd = self.cmd_download_file_or_directory.format(max_depth, dir_to_download, target_dir)
-            run_shell_command(download_files_cmd, logger)
+            run_shell_command(download_files_cmd, logger, ignore='/ignore/**')
         except Exception as e:
             logger.make_error_entry('Error downloading file directory {}'.format(dir_to_download))
             raise e
