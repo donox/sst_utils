@@ -85,8 +85,16 @@ class ProcessStoryContent(object):
                     self.logger.make_error_entry(f"Unrecognized text file {file} in {self.folder_path}")
                     raise CDEx(f"Unrecognized text file {file} in {self.folder_path}")
             elif ext == 'md':
-                self.logger.make_error_entry(f"{file} or type .md in {self.folder_path} not yet implemented.")
-                raise CDEx(f"{file} or type .md in {self.folder_path} not yet implemented.")
+                # Markdown files are copied without further evaluation just as is done in the command transfer files
+                out_dir = pl.Path(self.sst_directory + story_meta['path'] + '/')
+                out_file = self.story_directory.name + '/' + file
+                try:
+                    if not test_run:
+                        os.makedirs(out_dir, exist_ok=True)
+                        shutil.copy(out_file, out_dir)
+                except NameError:
+                    pass
+                self._copy_meta_file(story_meta, out_dir=out_dir)
             else:
                 self.logger.make_error_entry(f"Unrecognized file type {ext} in {self.folder_path}")
                 raise CDEx(f"Unrecognized file type {ext} in {self.folder_path}")

@@ -49,6 +49,7 @@ def run_shell_command(command_line, logger, outfile=False, result_as_string=Fals
         if process_error:
             logger.make_error_entry(f"Error returned from subprocess with command line:\n\t\t{command_line}" +
                                     f"\n\nError:\n\t\t{process_error}")
+        logger.make_info_entry(f"Command output (first 1000 chars):\n\n{process_output[:1000]}")
         if outfile:
             with open(outfile, 'wb') as fl:
                 fl.write(process_output)
