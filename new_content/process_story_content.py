@@ -180,6 +180,7 @@ class ProcessStoryContent(object):
         source = pl.Path(self.story_directory.name) / file
         try:
             if not test_run:
+                os.makedirs(image_path, exist_ok=True)
                 shutil.copy(source, image_path)
         except NameError:
             pass
