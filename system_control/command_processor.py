@@ -335,10 +335,11 @@ class ManageFolders(object):
         """Process all folders in containing folder."""
         content = self.manage_drive.directory_list_directories(self.logger, self.current_folder)
         for item in content:
-            current_folder = self.current_folder
-            self.current_folder += '/' + item
-            self.process_commands(item)
-            self.current_folder = current_folder
+            if item != 'ignore':
+                current_folder = self.current_folder
+                self.current_folder += '/' + item
+                self.process_commands(item)
+                self.current_folder = current_folder
 
     def _command_single_folder(self, command, folder=None, folder_type=None):
         # Keyword args are to allow the 'All' command to use this code and provide otherwise missing values.
