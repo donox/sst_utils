@@ -21,7 +21,7 @@
                 <div>Meeting Schedule: ${entry['schedule']}</div>
                 <div>Meeting Location: ${entry['location']}</div>
                 %if entry['URL'] and entry['URL'] != '':
-                    <div>URL: <a href="${entry['URL']}">Visit Club Page</a></div>
+                    <div>URL: <a href="${entry['URL']}">Visit ${entry['name']}</a></div>
                 %endif
                 <div style="font-size: smaller; margin-left: 20px;">Last updated: ${entry['updated']}</div>
             </div>
@@ -42,7 +42,7 @@
                 <div>Meeting Schedule: ${entry['schedule']}</div>
                 <div>Meeting Location: ${entry['location']}</div>
                 %if entry['URL'] and entry['URL'] != '':
-                    <div>URL: <a href="${entry['URL']}">Visit On Campus Opportunity</a></div>
+                    <div>URL: <a href="${entry['URL']}">Visit ${entry['name']}</a></div>
                 %endif
                 <div style="font-size: smaller; margin-left: 20px;">Last updated: ${entry['updated']}</div>
             </div>
@@ -63,7 +63,7 @@
                 <div>Meeting Schedule: ${entry['schedule']}</div>
                 <div>Meeting Location: ${entry['location']}</div>
                 %if entry['URL'] and entry['URL'] != '':
-                    <div>URL: <a href="${entry['URL']}">Visit Off Campus Opportunity</a></div>
+                    <div>URL: <a href="${entry['URL']}">Visit ${entry['name']}</a></div>
                 %endif
                 <div style="font-size: smaller; margin-left: 20px;">Last updated: ${entry['updated']}</div>
             </div>
