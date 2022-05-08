@@ -17,7 +17,7 @@ class ProcessStoryContent(object):
     def __init__(self, logger, folder_path, temp_directory, docx_directory, sst_directory,
                  image_directory, gallery_directory):
         self.logger = logger
-        self.first_photo = True     # switch to detect processing of first photo
+        self.first_photo = True  # switch to detect processing of first photo
         self.drive = mgd()
         self.folder_path = mgd.add_slash(folder_path)
         self.galleries = self.drive.directory_list_directories(self.logger, self.folder_path)
@@ -30,7 +30,8 @@ class ProcessStoryContent(object):
         self.gallery_directory = gallery_directory
         self.pages_directory = pl.Path(self.sst_directory) / 'pages/'
         # Note, downloading to max-depth=2 downloads contents of any galleries.
-        self.drive.download_directory(self.logger, self.folder_path, mgd.add_slash(self.story_directory.name), max_depth=2)
+        self.drive.download_directory(self.logger, self.folder_path, mgd.add_slash(self.story_directory.name),
+                                      max_depth=2)
 
     def process_content(self):
         if "meta.txt" in self.filenames:
@@ -68,22 +69,19 @@ class ProcessStoryContent(object):
                         self.logger.make_error_entry(f"There is no photo_path in meta.txt")
                         raise CDEx(f"Missing photo_path")
                     self.process_photo(story_meta['photo_path'], file)
-                except:
-                    self.logger.make_error_entry("No path in photos.txt for photo: {file}")
-                    raise CDEx(f"No path in photos.txt for photo: {file}")
+                except Exception as exc:
+                    self.logger.make_error_entry(f"Error in processing photo: {exc.args}")
+                    raise exc
 
             elif ext == 'pdf':
-                # if not has_photos:
-                #     self.logger.make_error_entry(f"Photo {file} found in folder  without having a photos.txt")
-                #     raise ValueError("Photos without photos.txt")
                 try:
                     if 'pdf_path' not in story_meta.keys():
-                        self.logger.make_error_entry(f"There is no photo_path in meta.txt")
+                        self.logger.make_error_entry(f"There is no pdf_path in meta.txt")
                         raise CDEx(f"Missing pdf_path")
                     self.process_pdf(story_meta['pdf_path'], file)
-                except:
-                    self.logger.make_error_entry("No path in pdf.txt for photo: {file}")
-                    raise CDEx(f"No path in pdf.txt for photo: {file}")
+                except Exception as exc:
+                    self.logger.make_error_entry(f"Error in processing pdf file: {exc.args}")
+                    raise exc
 
             elif ext == 'txt':
                 if file == 'meta.txt' or file == 'photos.txt' or file == 'commands.txt':
@@ -119,7 +117,7 @@ class ProcessStoryContent(object):
         # copy docx file ensuring file corresponds to slug
         source = pl.Path(self.story_directory.name) / file
         val_sc = vs.ValidateShortcodes(source, 'docx', self.logger)
-        val_sc.clean_docx()           # Already duplicated in nikola command
+        val_sc.clean_docx()  # Already duplicated in nikola command
         val_sc.process_shortcodes()
         target = self.docx_directory + story_meta['slug'] + ".docx"
         try:
@@ -168,11 +166,11 @@ class ProcessStoryContent(object):
         context["body"] = []
         for el in story_content[1:]:
             if el:
-                if 'photo_path' in story_meta.keys():     # support pictures - such as in Sunnybear
+                if 'photo_path' in story_meta.keys():  # support pictures - such as in Sunnybear
                     el['picture'] = story_meta['photo_path'] + el['picture']
                 context["body"].append(el)
         results = template.render(**context)
-        results = results.replace('\n\n', '\n')     # somehow, md ignores html following two blank lines.
+        results = results.replace('\n\n', '\n')  # somehow, md ignores html following two blank lines.
         out_dir = pl.Path(self.sst_directory + story_meta['path'] + '/')
         try:
             if not test_run:
@@ -198,7 +196,6 @@ class ProcessStoryContent(object):
         except NameError:
             pass
 
-
     def process_pdf(self, path, file):
         ndx = 0
         if path[0] == '/':
@@ -213,7 +210,7 @@ class ProcessStoryContent(object):
             pass
 
     def process_gallery(self, path_to_gallery):
-        if os.path.exists(path_to_gallery):     # can be empty if there was an ignore folder
+        if os.path.exists(path_to_gallery):  # can be empty if there was an ignore folder
             photo_files = os.listdir(path_to_gallery)
             resolved_gallery_path = pl.Path(path_to_gallery)
             if 'metadata.yml' in photo_files:
@@ -222,7 +219,8 @@ class ProcessStoryContent(object):
                         # Note: yaml is small and we convert to list so it can be reused
                         gallery_meta = [x for x in yaml.safe_load_all(stream)]
                     except yaml.YAMLError as exc:
-                        self.logger.make_error_entry(f"YAML error encountered in {path_to_gallery} with error {exc.args}")
+                        self.logger.make_error_entry(
+                            f"YAML error encountered in {path_to_gallery} with error {exc.args}")
                         raise CDEx(f"YAML Error: {exc.args}")
                     # First - locate gallery path and gallery name
                     gallery_path = None
