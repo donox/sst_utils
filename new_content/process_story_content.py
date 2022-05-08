@@ -72,6 +72,19 @@ class ProcessStoryContent(object):
                     self.logger.make_error_entry("No path in photos.txt for photo: {file}")
                     raise CDEx(f"No path in photos.txt for photo: {file}")
 
+            elif ext == 'pdf':
+                # if not has_photos:
+                #     self.logger.make_error_entry(f"Photo {file} found in folder  without having a photos.txt")
+                #     raise ValueError("Photos without photos.txt")
+                try:
+                    if 'pdf_path' not in story_meta.keys():
+                        self.logger.make_error_entry(f"There is no photo_path in meta.txt")
+                        raise CDEx(f"Missing pdf_path")
+                    self.process_pdf(story_meta['pdf_path'], file)
+                except:
+                    self.logger.make_error_entry("No path in pdf.txt for photo: {file}")
+                    raise CDEx(f"No path in pdf.txt for photo: {file}")
+
             elif ext == 'txt':
                 if file == 'meta.txt' or file == 'photos.txt' or file == 'commands.txt':
                     pass
@@ -182,6 +195,20 @@ class ProcessStoryContent(object):
             if not test_run:
                 os.makedirs(image_path, exist_ok=True)
                 shutil.copy(source, image_path)
+        except NameError:
+            pass
+
+
+    def process_pdf(self, path, file):
+        ndx = 0
+        if path[0] == '/':
+            ndx = 1
+        pdf_path = self.sst_directory + path[ndx:]
+        source = pl.Path(self.story_directory.name) / file
+        try:
+            if not test_run:
+                os.makedirs(pdf_path, exist_ok=True)
+                shutil.copy(source, pdf_path)
         except NameError:
             pass
 
