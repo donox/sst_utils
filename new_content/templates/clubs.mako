@@ -1,12 +1,9 @@
 {{% meta_info info_type="title" %}}${head["title"]}{{% /meta_info %}}
-{{% meta_info info_type="title" %}}${head["byline"]}{{% /meta_info %}}
-<p>Contact any of the individuals listed below if you are interested in learning more about the Sunnyside Campus
-    Clubs.</p>
-
-<p>Date of most recent update is listed in [] and is dependent on each group. Groups email Mike Bollen
-    (wmbollen@gmail.com) with updates.</p>
-
-<p>If you have an idea for another club/group please contact Layna Erney, IL Events Coordinator (8241).</p>
+<div>Maintained by: ${head["byline"]}</div>
+<div style="font-size: smaller; font-weight: bolder;margin-left: 30px; margin-bottom: 15px">Last updated: ${head["updated"]}</div>
+% for para in head["header_text"].split('\\n'):
+<p>${para}</p>
+% endfor
 
 ## Beware of allowing the opening div to indent 4 spaces - causes Markdown code insert
 <% club_entries = len([ x for x in body if x['type']=='club']) %>

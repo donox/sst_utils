@@ -145,6 +145,7 @@ class ProcessStoryContent(object):
             pass
 
     def process_template(self, story_meta, file):
+        # story_meta is dict of meta.txt associated with the file
         self.logger.make_info_entry(f"Start processing template on file: {file}")
         template_name = story_meta['template_mako']
         file_path = pl.Path(self.story_directory.name) / file
@@ -156,7 +157,7 @@ class ProcessStoryContent(object):
             except yaml.YAMLError as exc:
                 self.logger.make_error_entry(f"YAML error encountered in {self.folder_path} with error {exc.args}")
                 raise CDEx(f"YAML error {exc.args}")
-        if not template_name.endswith('.mako'):
+        if not template_name.endswith('.mako'):      # Defend against forgetting the extension
             filename = 'new_content/templates/' + template_name + '.mako'
         else:
             filename = 'new_content/templates/' + template_name
