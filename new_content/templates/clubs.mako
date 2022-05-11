@@ -17,6 +17,8 @@
 </div>
 % endif
 <%
+    # css will set anything of class src_select_content_el to display: None expecting
+    # a button to change it.
     if len(buttons) > 0:
         content_selection_class = 'src_select_content_el'
     else:
