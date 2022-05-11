@@ -60,7 +60,7 @@ class ProcessStoryContent(object):
                     self.logger.make_error_entry(f"Folder: {self.folder_path} has no file meta.txt")
                     raise CDEx(f"Folder: {self.folder_path} has no file meta.txt")
                 self.process_docx(story_meta, file)
-            elif ext == 'jpg':
+            elif ext == 'jpg' or ext == 'jpeg':
                 # if not has_photos:
                 #     self.logger.make_error_entry(f"Photo {file} found in folder  without having a photos.txt")
                 #     raise ValueError("Photos without photos.txt")
