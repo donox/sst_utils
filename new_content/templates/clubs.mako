@@ -3,7 +3,7 @@
 <div style="font-size: smaller; font-weight: bolder;margin-left: 30px; margin-bottom: 15px">Last
     updated: ${head["updated"]}</div>
 % for para in head["header_text"].split('\\n'):
-    <p>${para}</p>
+<p>${para}</p>
 % endfor
 
 % if has_buttons:
