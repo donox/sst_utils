@@ -3,7 +3,7 @@
 <div style="font-size: smaller; font-weight: bolder;margin-left: 30px; margin-bottom: 15px">Last
     updated: ${head["updated"]}</div>
 % for para in head["header_text"].split('\\n'):
-<p>${para}</p>
+    <p>${para}</p>
 % endfor
 
 % if has_buttons:
@@ -14,8 +14,8 @@
             <figcaption>${button_entry['caption']}</figcaption>
         </figure>
     % endfor
-    <div style="font-size: smaller; font-weight: bolder">Click to see club list</div>
 </div>
+<div style="font-size: smaller; font-weight: bolder">Click to see club list</div>
 % endif
 <%
     # css will set anything of class src_select_content_el to display: None, expecting
@@ -32,18 +32,18 @@
     % for group in clubs.keys():
         <h2 class="src-flex-item ${content_selection_class}" data-group="${group}"> ${captions[group]}</h2>
 
-        % for entry in clubs[group]:
-            <div class="src-flex-item ${content_selection_class}" data-group="${entry['group']}">
-                    <h3>${entry['name']}</h3>
-                    <div>Contact: ${entry['contact']} (${entry['phone']})</div>
-                    <div>Meeting Schedule: ${entry['schedule']}</div>
-                    <div>Meeting Location: ${entry['location']}</div>
-                    %if entry['URL'] and entry['URL'] != '':
-                        <div>URL: <a href="${entry['URL']}">Visit ${entry['name']}</a></div>
-                    %endif
-                    <div style="font-size: smaller; margin-left: 20px;">Last updated: ${entry['updated']}</div>
-                </div>
-        % endfor
+    % for entry in clubs[group]:
+        <div class="src-flex-item ${content_selection_class}" data-group="${entry['group']}">
+            <h3>${entry['name']}</h3>
+            <div>Contact: ${entry['contact']} (${entry['phone']})</div>
+            <div>Meeting Schedule: ${entry['schedule']}</div>
+            <div>Meeting Location: ${entry['location']}</div>
+            %if entry['URL'] and entry['URL'] != '':
+                <div>URL: <a href="${entry['URL']}">Visit ${entry['name']}</a></div>
+            %endif
+            <div style="font-size: smaller; margin-left: 20px;">Last updated: ${entry['updated']}</div>
+        </div>
+    % endfor
     % endfor
 </div>
 % endif
@@ -53,7 +53,7 @@
 <div class="container">
     <h2>On Campus Opportunities</h2>
     % for entry in on_campus:
-        <div class="src-flex-item ${content_selection_class}" >
+        <div class="src-flex-item ${content_selection_class}">
             <h3>${entry['name']}</h3>
             <div>Contact: ${entry['contact']} (${entry['phone']})</div>
             <div>Meeting Schedule: ${entry['schedule']}</div>
