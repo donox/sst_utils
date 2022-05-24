@@ -278,6 +278,8 @@ class ProcessStoryContent(object):
                     except Exception as e:
                         foo = 3
                         context['has_off_campus'] = True
+                else:
+                    context['body'].append(el)
             context['on_campus'] = on_campus_list
             context['off_campus'] = off_campus_list
         try:
