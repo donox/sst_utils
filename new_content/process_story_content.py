@@ -73,17 +73,6 @@ class ProcessStoryContent(object):
                 except Exception as exc:
                     self.logger.make_error_entry(f"Error in processing photo: {exc.args}")
                     raise exc
-
-            elif ext == 'pdf':
-                try:
-                    if 'pdf_path' not in story_meta.keys():
-                        self.logger.make_error_entry(f"There is no pdf_path in meta.txt")
-                        raise CDEx(f"Missing pdf_path")
-                    self.process_pdf(story_meta['pdf_path'], file)
-                except Exception as exc:
-                    self.logger.make_error_entry(f"Error in processing pdf data_file: {exc.args}")
-                    raise exc
-
             elif ext == 'txt':
                 if file == 'meta.txt' or file == 'photos.txt' or file == 'commands.txt':
                     pass
